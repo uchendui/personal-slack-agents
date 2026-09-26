@@ -6,3 +6,5 @@ operator.txt
 admin-app.json
 __pycache__/
 *.pyc
+.claude/
+docs/images/*-check-*.png
