@@ -1,0 +1,8 @@
+*.env
+.env
+credentials.json
+registry.json
+operator.txt
+admin-app.json
+__pycache__/
+*.pyc
