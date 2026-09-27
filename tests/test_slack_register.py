@@ -333,6 +333,7 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(json.loads((self.root / "credentials.json").read_text()), pair)
 
     def test_provision_uses_developer_api_and_joins_channel(self):
+        self.write_registered("agent-a")
         module._write(self.root / "operator.txt", "U-operator\n")
         user_calls = []
         bot_calls = []
@@ -372,6 +373,8 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
 
         def bot_api(method, token=None, **fields):
             bot_calls.append((method, token, fields))
+            if method == "users.list":
+                return {"members": []}
             if method == "auth.test":
                 return {"user_id": "B-test"}
             if method == "conversations.list":
@@ -391,6 +394,7 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
         ])
         self.assertEqual(user_calls[1][2]["bot_scopes"], expected_scopes)
         self.assertTrue(all(call[2]["json_body"] for call in user_calls[:2]))
+        self.assertEqual(bot_calls[0][:2], ("users.list", "fake-bot-test"))
         self.assertEqual(
             [
                 (method, token, fields["channel"])
@@ -432,7 +436,7 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
             module._join_channels(credentials(), ("test-channel",))
 
     def test_deleted_recorded_app_is_recreated_on_reuse(self):
-        self.root.mkdir(mode=0o700, exist_ok=True)
+        self.write_registered("agent-a")
         module._write(self.root / "operator.txt", "U-operator\n")
         calls = []
 
@@ -449,6 +453,9 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
             return {}
 
         def bot_api(method, token, json_body=False, **fields):
+            calls.append(method)
+            if method == "users.list":
+                return {"members": []}
             if method == "auth.test":
                 return {"user_id": "B-bot", "app_id": "A-fresh"}
             return {"channels": []}
@@ -460,9 +467,76 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
             result = module._provision("test-agent", "A-deleted", "T-test", ())
         self.assertEqual(result["SLACK_APP_ID"], "A-fresh")
         self.assertEqual(
-            calls[:3],
-            ["apps.manifest.update", "apps.manifest.create", "apps.developerInstall"],
+            calls[:4],
+            ["apps.manifest.update", "users.list", "apps.manifest.create", "apps.developerInstall"],
         )
+
+    def test_unmanageable_recorded_app_is_not_replaced(self):
+        calls = []
+
+        def user_api(method, team, json_body=False, **fields):
+            calls.append(method)
+            if method == "apps.manifest.update":
+                raise module.SlackAPIError(method, "no_permission")
+            raise AssertionError(method)
+
+        with (
+            mock.patch.object(module, "_user_api", side_effect=user_api),
+            self.assertRaises(module.RegisterError),
+        ):
+            module._provision("test-agent", "A-foreign", "T-test", ())
+        self.assertEqual(calls, ["apps.manifest.update"])
+
+    def test_create_refuses_when_a_bot_with_the_same_name_exists(self):
+        self.write_registered("agent-a")
+        calls = []
+
+        def bot_api(method, token, json_body=False, **fields):
+            calls.append((method, token, fields))
+            if fields["cursor"] is None:
+                return {"members": [
+                    {"id": "U-deleted", "is_bot": True, "deleted": True, "real_name": "test-agent"},
+                ], "response_metadata": {"next_cursor": "page-2"}}
+            return {"members": [
+                {"id": "U-dup", "is_bot": True, "deleted": False, "real_name": "test-agent",
+                 "profile": {"api_app_id": "A-dup"}},
+            ], "response_metadata": {"next_cursor": ""}}
+
+        with (
+            mock.patch.object(module, "_user_api", side_effect=AssertionError),
+            mock.patch.object(module, "_api", side_effect=bot_api),
+            self.assertRaises(module.RegisterError) as raised,
+        ):
+            module._provision("test-agent", None, "T-test", ())
+        self.assertIn("U-dup (app A-dup)", str(raised.exception))
+        self.assertNotIn("U-deleted", str(raised.exception))
+        self.assertEqual(calls, [
+            ("users.list", "fake-bot-test", {"limit": 200, "cursor": None}),
+            ("users.list", "fake-bot-test", {"limit": 200, "cursor": "page-2"}),
+        ])
+
+    def test_create_without_local_agents_skips_the_same_name_check(self):
+        self.root.mkdir(mode=0o700)
+        self.agents.mkdir(mode=0o700)
+        module._write(self.root / "operator.txt", "U-operator\n")
+
+        def user_api(method, team, json_body=False, **fields):
+            if method == "apps.manifest.create":
+                return {"app_id": "A-fresh"}
+            if method == "apps.developerInstall":
+                return {"api_access_tokens": {"app_level": "xapp", "bot": "fake-bot"}}
+            return {"user_id": "U-operator"}
+
+        def bot_api(method, token, json_body=False, **fields):
+            self.assertNotEqual(method, "users.list")
+            return {"user_id": "B-bot", "app_id": "A-fresh"}
+
+        with (
+            mock.patch.object(module, "_user_api", side_effect=user_api),
+            mock.patch.object(module, "_api", side_effect=bot_api),
+        ):
+            result = module._provision("test-agent", None, "T-test", ())
+        self.assertEqual(result["SLACK_APP_ID"], "A-fresh")
 
     def test_cli_token_refresh_uses_form_and_atomically_updates_credentials(self):
         self.root.mkdir(mode=0o700)

@@ -375,16 +375,48 @@ def _join_channels(values, joins):
         print(f"Verified Slack membership: #{channel_name} ({channel_id})")
 
 
+def _same_name_bots(name):
+    configs = load_agent_configs(AGENTS_DIR) if REGISTRY_PATH.exists() else {}
+    if not configs:
+        LOG.warning("no local bot token; skipping the same-name bot check for %s", name)
+        return []
+    # The admin user token has no users:read, so a local agent's bot token does the scan.
+    token = configs[min(configs)].bot_token
+    bots = []
+    cursor = None
+    while True:
+        page = _api("users.list", token, limit=200, cursor=cursor)
+        bots += [
+            member for member in page["members"]
+            if member.get("is_bot") and not member.get("deleted") and member.get("real_name") == name
+        ]
+        cursor = page.get("response_metadata", {}).get("next_cursor")
+        if not cursor:
+            return bots
+
+
+def _create_app(name, team, encoded):
+    # A lost or unmanageable record must never produce a second bot with the
+    # same display name, so refuse to create while one already exists.
+    bots = _same_name_bots(name)
+    if bots:
+        found = ", ".join(f"{m['id']} (app {m.get('profile', {}).get('api_app_id')})" for m in bots)
+        raise RegisterError(
+            f"a bot named {name} already exists in the workspace: {found}; "
+            f"remove that app before registering {name}"
+        )
+    created = _user_api("apps.manifest.create", team, json_body=True, manifest=encoded)
+    app_id = created.get("app_id")
+    if not isinstance(app_id, str) or not app_id:
+        raise RegisterError("Slack app creation returned no app id")
+    return app_id
+
+
 def _provision(name, app_id, team, joins):
     manifest = _manifest(name)
     encoded = json.dumps(manifest)
     if app_id is None:
-        created = _user_api(
-            "apps.manifest.create", team, json_body=True, manifest=encoded
-        )
-        app_id = created.get("app_id")
-        if not isinstance(app_id, str) or not app_id:
-            raise RegisterError("Slack app creation returned no app id")
+        app_id = _create_app(name, team, encoded)
     else:
         try:
             _user_api(
@@ -392,15 +424,17 @@ def _provision(name, app_id, team, joins):
                 app_id=app_id, manifest=encoded,
             )
         except SlackAPIError as exc:
+            if exc.reason == "no_permission":
+                raise RegisterError(
+                    f"Slack app {app_id} for {name} was created by another Slack user, "
+                    "so this machine's Slack user token cannot manage it; remove it at "
+                    "https://api.slack.com/apps or in the workspace app management page "
+                    "(or add the service-token user as a collaborator), then rerun"
+                ) from exc
             if exc.reason != "app_not_found":
                 raise
             # The recorded app was deleted externally; create a fresh one.
-            created = _user_api(
-                "apps.manifest.create", team, json_body=True, manifest=encoded
-            )
-            app_id = created.get("app_id")
-            if not isinstance(app_id, str) or not app_id:
-                raise RegisterError("Slack app creation returned no app id")
+            app_id = _create_app(name, team, encoded)
     installed = _user_api(
         "apps.developerInstall", team, json_body=True,
         app_id=app_id, bot_scopes=BOT_SCOPES,
