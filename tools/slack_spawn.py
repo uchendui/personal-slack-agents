@@ -25,9 +25,8 @@ def run(argv=None):
                         help="command prefix that runs Claude Code, e.g. 'ccr cc-work cli --'")
     parser.add_argument("--model", help="replaces the live session's --model/--effort")
     args = parser.parse_args(argv)
-    config_dir = args.claude_config_dir or os.environ.get("CLAUDE_CONFIG_DIR")
-    if config_dir is None:
-        parser.error("--claude-config-dir is required when CLAUDE_CONFIG_DIR is unset")
+    # ~/.claude is where Claude Code itself keeps its login when CLAUDE_CONFIG_DIR is unset.
+    config_dir = args.claude_config_dir or os.environ.get("CLAUDE_CONFIG_DIR") or "~/.claude"
     profile = Path(config_dir).expanduser().resolve()
     try:
         launcher = slack_register.resolve_launcher(args.launcher)
@@ -40,7 +39,11 @@ def run(argv=None):
     if args.model:
         runtime_args = f"--model {shlex.quote(args.model)}"
     elif launcher == "claude":
-        runtime_args = slack_register._live_claude_args()
+        # Run from a plain shell there is no live session to copy, so Claude Code's own defaults apply.
+        try:
+            runtime_args = slack_register._live_claude_args()
+        except slack_register.RegisterError:
+            runtime_args = ""
     else:
         runtime_args = ""
     # Stored with the other args so revive_parent restarts it the same way.
