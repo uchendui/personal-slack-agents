@@ -36,6 +36,12 @@ link "$tools/claude-pty-broker.py" "$bin/claude-pty-broker"
 link "$tools/antigravity-pty-broker.py" "$bin/antigravity-pty-broker"
 link "$tools/antigravity-send.py" "$bin/antigravity-send"
 link "$tools/pty_broker.py" "$bin/pty_broker.py"
+# The bridge reads the agents directory and the registry at start, and
+# slack-register creates them only at the first registration.
+PYTHONPATH="$tools" "$venv/bin/python" -c 'import slack_register as r
+with r._lock():
+    r._directory(r.AGENTS_DIR, create=True)
+    r.REGISTRY_PATH.exists() or r._save(r._registry())'
 
 cat >"$units/slack-bridge.service" <<'EOF'
 [Unit]
@@ -105,6 +111,7 @@ fi
 loginctl enable-linger "$USER" 2>/dev/null || sudo loginctl enable-linger "$USER"
 [[ -e /var/lib/systemd/linger/$USER ]] || { echo "linger not enabled for $USER" >&2; exit 1; }
 systemctl --user daemon-reload
-systemctl --user enable slack-bridge.service slack-token-rotate.timer
+systemctl --user enable slack-bridge.service
+systemctl --user enable --now slack-token-rotate.timer
 [[ ${#sweep_timer[@]} -eq 0 ]] || systemctl --user enable --now "${sweep_timer[@]}"
 systemctl --user restart slack-bridge.service

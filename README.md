@@ -128,7 +128,7 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 
 ### Requirements
 
-- Linux with systemd user services, bash, tmux, and python3 (3.11 or newer).
+- Linux with systemd user services, bash, tmux, git, curl, python3 (3.11 or newer), and python3-venv.
 - A Slack workspace where you can create apps.
 - The Slack CLI. The setup script installs it when it is missing.
 - The agent CLIs you want to expose (`claude`, `codex`, or `agy`) in `~/.local/bin` or on `PATH`.
@@ -217,5 +217,5 @@ Reference: https://docs.slack.dev/tools/slack-cli/reference/commands/slack_auth_
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests -t .
+~/.local/share/slack-bridge/venv/bin/python -m unittest discover -s tests -t .
 ```

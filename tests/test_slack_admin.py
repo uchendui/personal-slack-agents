@@ -86,6 +86,7 @@ class DeleteThreadTest(unittest.TestCase):
     def test_delete_registered_app_reports_when_the_bridge_picks_up_removal(self):
         registry = {"agents": {"agent": {}}, "tombstones": {}}
         with (
+            mock.patch.object(module.slack_register, "REGISTRY_PATH", mock.Mock(exists=lambda: True)),
             mock.patch.object(module.slack_register, "load_registry", return_value=registry),
             mock.patch.object(module, "_resolve_app", return_value=("agent", "A-test")),
             mock.patch.object(module, "_user_api"),
