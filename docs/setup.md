@@ -67,7 +67,7 @@ slack-spawn codex-agent --tmux-session work --launcher "ccr cc-codex cli --" \
 
 ### Codex and Gemini
 
-`setup/setup-model-router.py` installs claude-code-router 3.0.20 and makes two profiles: `cc-codex` for your Codex login and `cc-gemini` for Gemini API keys.
+`setup/setup-model-router.py` installs claude-code-router 3.0.20. It always makes `cc-codex` for your Codex login, and makes `cc-gemini` only when `~/.gemini_api_keys` exists.
 
 Requirements:
 - Node.js 22 or newer, and npm.

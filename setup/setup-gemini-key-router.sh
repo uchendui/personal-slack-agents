@@ -18,7 +18,11 @@ if [ ! -s "$token_file" ]; then
   /usr/bin/python3 -c 'import secrets, sys; open(sys.argv[1], "w").write(secrets.token_urlsafe(32) + "\n")' "$token_file"
 fi
 chmod 600 "$token_file"
-[ -f "$HOME/.gemini_api_keys" ] || echo "note: $HOME/.gemini_api_keys is missing; the router starts but has no keys to rotate" >&2
+if [ -f "$HOME/.gemini_api_keys" ]; then
+  chmod 600 "$HOME/.gemini_api_keys"
+else
+  echo "note: $HOME/.gemini_api_keys is missing; the router starts but has no keys to rotate" >&2
+fi
 
 rm -f -- "$bin/gemini-key-router"
 ln -s -- "$tools/gemini-key-router.py" "$bin/gemini-key-router"
@@ -50,5 +54,7 @@ for _ in $(seq 1 50); do
   fi
   sleep 0.2
 done
+# Stop the unit so it does not restart every 2 s against a held port.
+systemctl --user disable --now gemini-key-router.service
 echo "gemini-key-router did not become healthy; see: systemctl --user status gemini-key-router" >&2
 exit 1

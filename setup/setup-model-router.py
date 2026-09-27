@@ -149,7 +149,6 @@ def restart_ccr():
         [str(CCR_BIN), "ui", "--no-open"],
         check=True,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
     )
     for _ in range(20):
         try:
