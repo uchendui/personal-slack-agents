@@ -473,6 +473,46 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
         ):
             module._join_channels(credentials(), ("test-channel",))
 
+    def test_join_creates_missing_channel_then_joins(self):
+        calls = []
+
+        def bot_api(method, token, **fields):
+            calls.append((method, fields))
+            if method == "conversations.list":
+                return {"channels": [{"id": "C-other", "name": "other"}]}
+            if method == "conversations.create":
+                return {"channel": {"id": "C-new"}}
+            if method == "conversations.info":
+                return {"channel": {"is_member": True}}
+            return {"ok": True}
+
+        with mock.patch.object(module, "_api", side_effect=bot_api):
+            module._join_channels(credentials(), ("#test-channel",))
+        self.assertEqual(calls[1:], [
+            ("conversations.create", {"name": "test-channel"}),
+            ("conversations.join", {"channel": "C-new"}),
+            ("conversations.info", {"channel": "C-new"}),
+        ])
+
+    def test_join_finds_channel_on_second_page_without_creating(self):
+        calls = []
+
+        def bot_api(method, token, **fields):
+            calls.append((method, fields))
+            if method == "conversations.list" and fields.get("cursor") is None:
+                return {"channels": [{"id": "C-other", "name": "other"}],
+                        "response_metadata": {"next_cursor": "page-2"}}
+            if method == "conversations.list":
+                return {"channels": [{"id": "C-test", "name": "test-channel"}]}
+            if method == "conversations.info":
+                return {"channel": {"is_member": True}}
+            return {"ok": True}
+
+        with mock.patch.object(module, "_api", side_effect=bot_api):
+            module._join_channels(credentials(), ("test-channel",))
+        self.assertNotIn("conversations.create", [method for method, _ in calls])
+        self.assertIn(("conversations.join", {"channel": "C-test"}), calls)
+
     def test_deleted_recorded_app_is_recreated_on_reuse(self):
         self.write_registered("agent-a")
         module._write(self.root / "operator.txt", "U-operator\n")

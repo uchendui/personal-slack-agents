@@ -353,19 +353,26 @@ def _manifest(name):
 
 
 def _join_channels(values, joins):
-    listing = None
+    channels = None
     token = values["SLACK_BOT_TOKEN"]
     for channel in joins:
-        if listing is None:
-            listing = _api("conversations.list", token, limit=200)
+        if channels is None:
+            channels = []
+            cursor = None
+            while True:
+                page = _api("conversations.list", token, limit=200, cursor=cursor)
+                channels += page.get("channels", [])
+                cursor = page.get("response_metadata", {}).get("next_cursor")
+                if not cursor:
+                    break
         channel_name = channel.removeprefix("#")
-        matches = [
-            item["id"] for item in listing.get("channels", [])
-            if item.get("name") == channel_name
-        ]
-        if len(matches) != 1:
+        matches = [item["id"] for item in channels if item.get("name") == channel_name]
+        if len(matches) > 1:
             raise RegisterError(f"channel does not resolve uniquely: {channel}")
-        channel_id = matches[0]
+        if matches:
+            channel_id = matches[0]
+        else:
+            channel_id = _api("conversations.create", token, name=channel_name)["channel"]["id"]
         _api("conversations.join", token, channel=channel_id)
         membership = _api("conversations.info", token, channel=channel_id)
         if membership.get("channel", {}).get("is_member") is not True:

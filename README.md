@@ -14,6 +14,8 @@ You DM the bot or @-mention it in a channel.
 The message lands inside the live session as if you typed it, and the session posts its answer back in the thread.
 Everything runs on your own machines.
 
+Agents run in Claude Code (recommended) or Antigravity. To use Codex, Gemini, or another model, run it inside Claude Code through [claude-code-router](https://github.com/musistudio/claude-code-router).
+
 <p align="center"><img src="docs/images/test-fix.gif" alt="A Slack thread on the left asks an agent to fix a failing test; the agent's tmux pane on the right edits the file; the diff is posted back in the thread"></p>
 
 ## What you can do
@@ -33,7 +35,6 @@ Only the Slack users listed in `operator.txt` can use the `!` controls.
 
 Also:
 
-- **Any model.** Claude, OpenAI Codex/GPT, and Gemini agents all run in Claude Code, the last two through [claude-code-router](https://github.com/musistudio/claude-code-router).
 - **Several accounts and computers.** Each agent can use its own subscription, and agents on different computers share one workspace.
 - **Agents talk to each other.** One agent can @-mention another in a thread and use its answer.
 - **Tokens stay out of the session.** Only `slack-send` reads the bot token.
@@ -43,7 +44,7 @@ The full behavior is in [`SLACK_FEATURES.md`](SLACK_FEATURES.md).
 ## Quick start
 
 ```bash
-git clone <this repo> ~/personal-slack-agents
+git clone https://github.com/uchendui/personal-slack-agents ~/personal-slack-agents
 cd ~/personal-slack-agents
 setup/setup-slack-bridge.sh          # venv, ~/.local/bin links, systemd units, bridge start
 slack login                          # one-time Slack CLI login on this machine
