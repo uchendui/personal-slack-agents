@@ -24,7 +24,6 @@ import pty_broker
 LOG = logging.getLogger("slack-bridge")
 from runtimes import RUNTIMES
 
-SESSION_DIR = Path.home() / ".claude-sessions-shared"
 STATE_DIR = Path.home() / ".local" / "state" / "slack-bridge" / "pty"
 GEMINI_BASE_URL = "http://127.0.0.1:3460"
 GEMINI_TOKEN_PATH = Path.home() / ".claude-code-router" / "gemini-key-router-token"
@@ -196,9 +195,11 @@ class Delivery:
             raise ValueError(f"session registry entry has invalid shape: {path}")
         return value
 
-    def _find_session(self, session_id: str) -> tuple[Path, dict]:
+    def _find_session(self, session_id: str, profile_dir: Path | None) -> tuple[Path, dict]:
+        # Claude Code registers each live session as <pid>.json under its
+        # config dir, which is ~/.claude when CLAUDE_CONFIG_DIR is unset.
         matches = []
-        for path in SESSION_DIR.glob("*.json"):
+        for path in ((profile_dir or Path.home() / ".claude") / "sessions").glob("*.json"):
             try:
                 entry = self._entry(path)
             except (OSError, LookupError, ValueError):
@@ -315,7 +316,7 @@ class Delivery:
                 entry_path=path,
             )
         else:
-            path, entry = self._find_session(config.session_id)
+            path, entry = self._find_session(config.session_id, config.profile_dir)
             ref = self._ref(path, entry, "claude" if runtime_name in ("claude", "codex") else runtime_name)
 
         if ref.name != config.name:

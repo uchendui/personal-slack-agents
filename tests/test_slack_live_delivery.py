@@ -61,7 +61,8 @@ class DeliveryTest(unittest.IsolatedAsyncioTestCase):
             "sessionId": "session", "name": "stale", "pid": 43, "procStart": "9",
         }
         with tempfile.TemporaryDirectory() as directory:
-            state_dir = Path(directory)
+            state_dir = Path(directory) / "sessions"
+            state_dir.mkdir()
             live_path = state_dir / "42.json"
             stale_path = state_dir / "43.json"
             live_path.write_text(json.dumps(live_entry))
@@ -72,33 +73,56 @@ class DeliveryTest(unittest.IsolatedAsyncioTestCase):
                     return (0, "7")
                 raise LookupError(f"process {pid} is not live")
 
-            with (
-                mock.patch.object(module, "SESSION_DIR", state_dir),
-                mock.patch.object(module.pty_broker, "process_stat", side_effect=process_stat),
-            ):
-                path, entry = delivery._find_session("session")
+            with mock.patch.object(module.pty_broker, "process_stat", side_effect=process_stat):
+                path, entry = delivery._find_session("session", Path(directory))
         self.assertEqual((path, entry), (live_path, live_entry))
 
     async def test_find_session_distinguishes_missing_from_duplicate_live_entries(self):
         delivery = module.Delivery()
         with tempfile.TemporaryDirectory() as directory:
-            state_dir = Path(directory)
-            with mock.patch.object(module, "SESSION_DIR", state_dir):
-                with self.assertRaises(module.SessionNotFound):
-                    delivery._find_session("session")
+            state_dir = Path(directory) / "sessions"
+            state_dir.mkdir()
+            with self.assertRaises(module.SessionNotFound):
+                delivery._find_session("session", Path(directory))
 
-                for pid in (42, 43):
-                    (state_dir / f"{pid}.json").write_text(json.dumps({
-                        "sessionId": "session", "name": "agent", "pid": pid,
-                        "procStart": str(pid),
-                    }))
-                with mock.patch.object(
-                    module.pty_broker, "process_stat",
-                    side_effect=lambda pid: (0, str(pid)),
-                ):
-                    with self.assertRaises(LookupError) as raised:
-                        delivery._find_session("session")
+            for pid in (42, 43):
+                (state_dir / f"{pid}.json").write_text(json.dumps({
+                    "sessionId": "session", "name": "agent", "pid": pid,
+                    "procStart": str(pid),
+                }))
+            with mock.patch.object(
+                module.pty_broker, "process_stat",
+                side_effect=lambda pid: (0, str(pid)),
+            ):
+                with self.assertRaises(LookupError) as raised:
+                    delivery._find_session("session", Path(directory))
         self.assertNotIsInstance(raised.exception, module.SessionNotFound)
+
+    async def test_discover_parent_reads_the_agent_config_dir_sessions(self):
+        entry = {
+            "sessionId": "session", "name": "agent", "pid": 42,
+            "procStart": "7", "kind": "interactive",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for profile_dir, sessions in (
+                (root / "profile", root / "profile" / "sessions"),
+                (None, root / ".claude" / "sessions"),
+            ):
+                with self.subTest(profile_dir=profile_dir):
+                    sessions.mkdir(parents=True)
+                    (sessions / "42.json").write_text(json.dumps(entry))
+                    config = SimpleNamespace(
+                        kind="claude", session_id="session", name="agent", profile_dir=profile_dir,
+                    )
+                    delivery = module.Delivery()
+                    with (
+                        mock.patch.dict(os.environ, {"HOME": directory}),
+                        mock.patch.object(module.pty_broker, "process_stat", return_value=(0, "7")),
+                        mock.patch.object(delivery, "verify_parent", mock.AsyncMock(return_value=True)),
+                    ):
+                        parent = await delivery.discover_parent(config)
+                    self.assertEqual(parent.entry_path, sessions / "42.json")
 
     async def test_codex_registration_resolves_to_the_claude_harness(self):
         delivery = module.Delivery()
@@ -106,7 +130,7 @@ class DeliveryTest(unittest.IsolatedAsyncioTestCase):
             "sessionId": "session", "name": "agent", "pid": 42,
             "procStart": "7", "kind": "interactive",
         }
-        config = SimpleNamespace(kind="codex", session_id="session", name="agent")
+        config = SimpleNamespace(kind="codex", session_id="session", name="agent", profile_dir=None)
         with (
             mock.patch.object(delivery, "_find_session", return_value=(Path("42.json"), entry)),
             mock.patch.object(delivery, "verify_parent", mock.AsyncMock(return_value=True)),
@@ -121,7 +145,7 @@ class DeliveryTest(unittest.IsolatedAsyncioTestCase):
             "sessionId": "session", "name": "auto-name", "pid": 42,
             "procStart": "7", "kind": "interactive",
         }
-        config = SimpleNamespace(kind="claude", session_id="session", name="agent")
+        config = SimpleNamespace(kind="claude", session_id="session", name="agent", profile_dir=None)
         with mock.patch.object(delivery, "_find_session", return_value=(Path("42.json"), entry)):
             with self.assertRaisesRegex(
                 LookupError,

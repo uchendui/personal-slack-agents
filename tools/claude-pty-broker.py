@@ -90,7 +90,7 @@ def idle_compact_seconds_from_environment() -> float | None:
 PROFILE = Profile(
     program=PROGRAM,
     state_dir=Path.home() / ".local" / "state" / "slack-bridge" / "pty",
-    session_dir=Path.home() / ".claude-sessions-shared",
+    session_dir=Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude")) / "sessions",
     socket_env="CLAUDE_PTY_BROKER_SOCKET",
     token_env="CLAUDE_PTY_BROKER_TOKEN",
     pid_env="CLAUDE_PTY_BROKER_PID",
