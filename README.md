@@ -15,7 +15,7 @@ The message lands inside the live session as if you typed it, and the session po
 Everything runs on your own machines.
 
 <p align="center"><img src="docs/images/test-fix.gif" alt="A Slack thread on the left asks an agent to fix a failing test; the agent's tmux pane on the right edits the file; the diff is posted back in the thread"></p>
-<p align="center"><sub>One Slack message. The agent finds the failing test, fixes it, runs the suite, and posts <code>fix.diff</code> in the thread. Slack thread on the left, the agent's tmux pane on the right. Waits play at 3x.</sub></p>
+<p align="center"><sub>One Slack message. The agent finds the failing test, fixes it, runs the suite, and posts <code>fix.diff</code> in the thread. Slack thread on the left, the agent's tmux pane on the right. Each clip plays at one constant speed, shown in its corner badge.</sub></p>
 
 ## What you can do
 
@@ -62,7 +62,7 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 
 ## Demos
 
-Each clip is a real Slack thread on the left and the agent's tmux pane on the right. Waits play at 3x.
+Each clip is a real Slack thread on the left and the agent's tmux pane on the right. Each clip plays at one constant speed, shown in its corner badge.
 
 <details>
 <summary><b>Fix a bug from an attached crash log</b></summary>
