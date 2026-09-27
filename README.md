@@ -15,7 +15,6 @@ The message lands inside the live session as if you typed it, and the session po
 Everything runs on your own machines.
 
 <p align="center"><img src="docs/images/test-fix.gif" alt="A Slack thread on the left asks an agent to fix a failing test; the agent's tmux pane on the right edits the file; the diff is posted back in the thread"></p>
-<p align="center"><sub>One Slack message. The agent finds the failing test, fixes it, runs the suite, and posts <code>fix.diff</code> in the thread. Slack thread on the left, the agent's tmux pane on the right. Each clip plays at one constant speed, shown in its corner badge.</sub></p>
 
 ## What you can do
 
@@ -62,12 +61,10 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 
 ## Demos
 
-Each clip is a real Slack thread on the left and the agent's tmux pane on the right. Each clip plays at one constant speed, shown in its corner badge.
-
 <details>
 <summary><b>Fix a bug from an attached crash log</b></summary>
 <br>
-<p>Attach <code>crash.log</code> to the message. The agent reads it, names the KeyError, adds a test, and commits the fix.</p>
+<p>Attach <code>crash.log</code> and ask for the fix.</p>
 <p align="center"><img src="docs/images/crash-log.gif" alt="an agent reads an attached crash log, names the bug, and fixes it"></p>
 </details>
 
@@ -76,18 +73,18 @@ Each clip is a real Slack thread on the left and the agent's tmux pane on the ri
 <br>
 <p>A file attached in Slack lands in the session as a local path.</p>
 <p align="center"><img src="docs/images/file-in.gif" alt="an attached file reaches the session and the agent answers about it"></p>
-<p>The agent posts a file back with <code>slack-send --file</code>. Here it is a bar chart it just drew.</p>
+<p>The agent posts files back with <code>slack-send --file</code>.</p>
 <p align="center"><img src="docs/images/file-out.gif" alt="the agent uploads a PNG into the thread"></p>
 </details>
 
 <details>
 <summary><b>Control the live session: <code>!effort</code>, <code>!stop</code>, <code>!goal</code></b></summary>
 <br>
-<p><code>!effort low</code> changes the effort level. The next question is answered at the new level.</p>
+<p><code>!effort low</code> changes the effort level.</p>
 <p align="center"><img src="docs/images/effort.gif" alt="!effort from Slack, confirmed in the thread, then a question answered"></p>
-<p><code>!stop</code> interrupts the running task. The pane shows the interrupt.</p>
+<p><code>!stop</code> interrupts the running task.</p>
 <p align="center"><img src="docs/images/stop.gif" alt="!stop from Slack interrupts the agent mid-task"></p>
-<p><code>!goal</code> gives the session a standing instruction that applies to every later answer.</p>
+<p><code>!goal</code> sets a standing instruction for every later answer.</p>
 <p align="center"><img src="docs/images/goal.gif" alt="!goal from Slack sets the session goal"></p>
 </details>
 
@@ -95,21 +92,18 @@ Each clip is a real Slack thread on the left and the agent's tmux pane on the ri
 <summary><b>Two agents on one repo at once</b></summary>
 <br>
 <p align="center"><img src="docs/images/two-agents.gif" alt="one Slack message gives demo-agent and demo-helper one bug each; both fix their bug at the same time and post a diff in the thread"></p>
-<p align="center"><sub>One message gives <code>demo-agent</code> and <code>demo-helper</code> one bug each. Both work at the same time, and each posts its diff in the thread.</sub></p>
 </details>
 
 <details>
 <summary><b>Ask an agent on another computer</b></summary>
 <br>
 <p align="center"><img src="docs/images/cross-computer.gif" alt="demo-agent on one computer asks kr-demo-agent on another computer in the same thread, then posts a comparison table"></p>
-<p align="center"><sub><code>demo-agent</code> on one computer asks <code>kr-demo-agent</code> on another in the same thread, gets its answer, and posts a table comparing both computers.</sub></p>
 </details>
 
 <details>
 <summary><b>Create a new agent from Slack</b></summary>
 <br>
 <p align="center"><img src="docs/images/spawn.gif" alt="a new agent is spawned from Slack and answers in the thread"></p>
-<p align="center"><sub><code>slack-spawn</code> registers <code>demo-helper</code>, starts its session in tmux session <code>demo</code>, and it answers in Slack.</sub></p>
 </details>
 
 ## What runs on its own
@@ -197,7 +191,6 @@ Each account is its own Claude config directory, such as `~/.claude-work` and `~
 Log in to each one once: run `CLAUDE_CONFIG_DIR=~/.claude-work claude`, then `/login`.
 A spawned agent picks its account with `--claude-config-dir`.
 An account routed through claude-code-router (Codex or Gemini) uses `--launcher "ccr <profile> cli --"` with that profile's `claude` directory.
-A shell alias such as `alias claude-work='CLAUDE_CONFIG_DIR=~/.claude-work claude'` only helps you type it by hand. The bridge never needs it.
 
 ```
 slack-spawn work-agent --tmux-session work --claude-config-dir ~/.claude-work
