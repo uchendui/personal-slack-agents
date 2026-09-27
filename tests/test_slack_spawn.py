@@ -29,12 +29,12 @@ class SpawnTest(unittest.TestCase):
              mock.patch.object(module.slack_register, "_live_claude_args", return_value="--model opus"), \
              mock.patch.object(module.slack_register, "_register") as register:
             module.run(["admin-agent", "--tmux-session", "admin", "--join", "ops",
-                        "--claude-config-dir", "/profiles/claude"])
+                        "--claude-config-dir", "/profiles/claude", "--team", "T123"])
 
         self.assertEqual(calls[0], ("tmux", "display-message", "-p", "-t", "admin:", "#{pane_current_path}"))
         args, kwargs = register.call_args
         self.assertEqual(args, ("admin-agent", "claude", Path("/work/admin"), Path("/profiles/claude"),
-                                "--model opus --dangerously-skip-permissions", None, ("all-agents", "ops")))
+                                "--model opus --dangerously-skip-permissions", "T123", ("all-agents", "ops")))
         session = kwargs["session"]
         home_bin = Path.home() / ".local" / "bin"
         self.assertEqual(calls[1], (

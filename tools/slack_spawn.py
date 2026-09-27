@@ -24,6 +24,7 @@ def run(argv=None):
     parser.add_argument("--launcher", default="claude",
                         help="command prefix that runs Claude Code, e.g. 'ccr cc-work cli --'")
     parser.add_argument("--model", help="replaces the live session's --model/--effort")
+    parser.add_argument("--team", help="Slack team id; required when several workspaces are logged in")
     args = parser.parse_args(argv)
     # With neither, the session runs with CLAUDE_CONFIG_DIR unset: Claude Code
     # then reads ~/.claude.json, which setting it to ~/.claude would bypass.
@@ -54,7 +55,7 @@ def run(argv=None):
     # the id is chosen here and both are passed to claude.
     session = str(uuid.uuid4())
     slack_register._register(
-        args.name, "claude", workdir, profile, runtime_args, None,
+        args.name, "claude", workdir, profile, runtime_args, args.team,
         slack_register.joins(args.join), session=session, launcher=launcher,
     )
     command = slack_register.slack_live_delivery.launch_command(
