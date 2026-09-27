@@ -3,7 +3,7 @@
 <p align="center"><b>DM your own Claude Code, Codex, and Gemini sessions from Slack, and they answer in the thread.</b></p>
 
 <p align="center">
-  <img alt="tests" src="https://img.shields.io/badge/tests-215%20passing-2ea44f">
+  <img alt="tests" src="https://img.shields.io/badge/tests-217%20passing-2ea44f">
   <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
   <img alt="runtimes" src="https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Codex%20%7C%20Antigravity-6f42c1">
 </p>
@@ -50,11 +50,8 @@ cd ~/personal-slack-agents
 setup/setup-slack-bridge.sh          # venv, ~/.local/bin links, systemd units, bridge start
 slack login                          # one-time Slack CLI login on this machine
 
-# From inside a running Claude Code session, give it a Slack identity:
-slack-register my-agent --kind claude --workdir "$PWD"
-
-# Or create a new agent in a tmux session called "work":
-slack-spawn my-agent --tmux-session work
+tmux new-session -d -s work -c ~/your-project   # the agent's tmux session and working directory
+slack-spawn my-agent --tmux-session work     # new agent in that session, with its own Slack bot
 ```
 
 Then DM `@my-agent` in Slack.
