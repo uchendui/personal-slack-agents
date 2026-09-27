@@ -122,7 +122,7 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 - **Slack slowdowns are retried.** When Slack says to slow down, the bridge waits the time Slack names and tries again, up to 5 attempts in all.
 - **Logins switch at a usage limit.** If `CLAUDE_ACCOUNT_CYCLE` is set and the session's transcript records a 'You've reached your ... limit' API error, the broker restarts the same conversation with `--resume` under the next login in the list. It tries a limited login again after 1 hour.
 - **The login token is refreshed before it expires.** The 6-hour keep-alive refreshes the Slack CLI login only when it has less than 7 hours left.
-- **The sweep deletes idle bots this machine registered.** Where the admin token exists, the hourly sweep deletes a bot app only when its app id is in this machine's `registry.json` (agents or tombstones) and the bot has not posted in any channel the admin user is in for 72 hours. Other bots are left alone.
+- **The sweep deletes idle retired bots this machine registered.** Where the admin token exists, the hourly sweep deletes a bot app only when its app id is a tombstone in this machine's `registry.json` and the bot has not posted in any channel the admin user is in for 72 hours. Registered agents and other bots are left alone.
 - **Old broker files are cleaned up.** A starting broker removes socket and state files left by brokers that are no longer running.
 
 ## Setup details

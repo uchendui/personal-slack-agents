@@ -75,10 +75,10 @@ class SlackSweepTest(unittest.TestCase):
         self.assertEqual(self.sweep(), "")
         self.delete.assert_not_called()
 
-    def test_silent_bot_is_deleted(self):
-        self.stub([bot("B2", "quiet", "A-quiet")], [])
+    def test_silent_registered_agent_is_kept_and_silent_retired_app_is_deleted(self):
+        self.stub([bot("B2", "quiet", "A-quiet"), bot("B5", "retired", "A-old")], [])
         self.assertEqual(self.sweep(), "")
-        self.delete.assert_called_once_with(["A-quiet"])
+        self.delete.assert_called_once_with(["A-old"])
 
     def test_silent_bot_of_another_machine_is_kept(self):
         self.stub([bot("B4", "foreign", "A-foreign"), bot("B5", "retired", "A-old")], [])
@@ -91,8 +91,8 @@ class SlackSweepTest(unittest.TestCase):
         self.delete.assert_not_called()
 
     def test_dry_run_lists_without_deleting(self):
-        self.stub([bot("B2", "quiet", "A-quiet")], [])
-        self.assertIn("would delete quiet (B2, app A-quiet)", self.sweep(dry_run=True))
+        self.stub([bot("B5", "retired", "A-old")], [])
+        self.assertIn("would delete retired (B5, app A-old)", self.sweep(dry_run=True))
         self.delete.assert_not_called()
         self.assertFalse(self.state.exists())
 

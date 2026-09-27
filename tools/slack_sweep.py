@@ -81,7 +81,9 @@ def sweep(hours: float, dry_run: bool) -> None:
     cutoff = now - hours * 3600
     state = _load_state() | recent_posts(token, cutoff)
     registry = slack_register.load_registry(slack_register.REGISTRY_PATH)
-    owned = {record["app_id"] for section in ("agents", "tombstones") for record in registry[section].values()}
+    # Only retired apps: activity is read from channel history, not thread
+    # replies, so a registered agent that answers only in threads looks idle.
+    retired = {record["app_id"] for record in registry["tombstones"].values()}
     # The admin user token has no users:read; agent bot tokens do, as
     # slack_admin._resolve_app already relies on.
     for user_id, user in sorted(bots(slack_admin._any_bot_token()).items()):
@@ -92,7 +94,7 @@ def sweep(hours: float, dry_run: bool) -> None:
         if not isinstance(app_id, str) or not app_id:
             print(f"skipped {name} ({user_id}): no api_app_id")
             continue
-        if app_id not in owned:
+        if app_id not in retired:
             continue
         if dry_run:
             print(f"would delete {name} ({user_id}, app {app_id}): no post in {hours:g}h")
