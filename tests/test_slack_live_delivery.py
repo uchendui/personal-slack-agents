@@ -124,21 +124,6 @@ class DeliveryTest(unittest.IsolatedAsyncioTestCase):
                         parent = await delivery.discover_parent(config)
                     self.assertEqual(parent.entry_path, sessions / "42.json")
 
-    async def test_codex_registration_resolves_to_the_claude_harness(self):
-        delivery = module.Delivery()
-        entry = {
-            "sessionId": "session", "name": "agent", "pid": 42,
-            "procStart": "7", "kind": "interactive",
-        }
-        config = SimpleNamespace(kind="codex", session_id="session", name="agent", profile_dir=None)
-        with (
-            mock.patch.object(delivery, "_find_session", return_value=(Path("42.json"), entry)),
-            mock.patch.object(delivery, "verify_parent", mock.AsyncMock(return_value=True)),
-        ):
-            parent = await delivery.discover_parent(config)
-        self.assertEqual(parent.runtime, "claude")
-        self.assertEqual((parent.session_id, parent.pid, parent.proc_start), ("session", 42, "7"))
-
     async def test_discover_parent_names_a_live_session_with_the_wrong_agent_name(self):
         delivery = module.Delivery()
         entry = {

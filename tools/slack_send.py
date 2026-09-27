@@ -24,12 +24,11 @@ COMMON = {
 }
 SCHEMAS = {
     "claude": COMMON | {"CLAUDE_ARGS"},
-    "codex": COMMON | {"CODEX_HOME", "CODEX_ARGS"},
     "antigravity": COMMON,
 }
 # No CLAUDE_CONFIG_DIR means the session runs with it unset, like a plain `claude`.
 OPTIONAL = {"claude": {"CLAUDE_CONFIG_DIR", "CLAUDE_LAUNCHER", "CLAUDE_LAUNCHER_PATH"}}
-EMPTY_OK = {"CLAUDE_ARGS", "CODEX_ARGS"}
+EMPTY_OK = {"CLAUDE_ARGS"}
 MESSAGE_CHAR_CAP = 1000
 
 

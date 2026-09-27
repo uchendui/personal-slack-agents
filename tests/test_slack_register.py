@@ -276,13 +276,14 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
                 side_effect=module.SlackAPIError("auth.test", "invalid_auth"),
             ) as api,
             mock.patch.object(module, "_credentials") as provision,
+            mock.patch.object(module, "_antigravity_session_id", return_value="session"),
             self.assertRaisesRegex(
                 module.RegisterError,
                 "already registered as claude; unregister the name, then register it with the new kind",
             ),
         ):
             module._register(
-                "test-agent", "codex", Path("/work"), Path("/profile"),
+                "test-agent", "antigravity", Path("/work"), Path("/profile"),
                 "", None, ("all-agents",),
             )
         provision.assert_not_called()
@@ -967,40 +968,6 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
             mock.patch.object(module.slack_live_delivery, "_parent_effort", return_value=["--effort", "high"]),
         ):
             self.assertEqual(module._live_claude_args(), "--model 'Gemini API,gemini-3.8-flash' --effort high")
-
-    def test_cli_parses_codex_profile_without_external_effects(self):
-        with (
-            mock.patch.object(module, "_register") as register,
-            mock.patch("builtins.print") as printed,
-        ):
-            result = module.run(
-                [
-                    "test-codex",
-                    "--kind",
-                    "codex",
-                    "--workdir",
-                    "/work",
-                    "--codex-home",
-                    "/profile",
-                    "--codex-args=--fast",
-                    "--join",
-                    "one",
-                    "--join",
-                    "two",
-                ]
-            )
-        self.assertEqual(result, 0)
-        register.assert_called_once_with(
-            "test-codex",
-            "codex",
-            Path("/work"),
-            Path("/profile"),
-            "--fast",
-            None,
-            ("all-agents", "one", "two"),
-            launcher=None,
-        )
-        printed.assert_called_once_with("slack-bridge picks up test-codex within 5 s")
 
     def test_cli_parses_antigravity_without_profile_flag(self):
         with (

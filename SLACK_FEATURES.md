@@ -95,9 +95,9 @@ The whole spec. If it's not here, don't build it.
   explicit success or failure.
 
 ## Registration and lifecycle
-- `slack-register <name> --kind <claude|codex> --workdir <dir>` with
-  per-kind profile flags (`--claude-config-dir`/`--claude-args`,
-  `--codex-home`/`--codex-args`), `--team` when several workspaces are logged
+- `slack-register <name> --kind <claude|antigravity> --workdir <dir>` with
+  Claude profile flags (`--claude-config-dir`/`--claude-args`/`--launcher`;
+  a Codex model runs as kind claude with `--launcher "ccr <profile> cli --"`), `--team` when several workspaces are logged
   in, `--join` for channels (default all-agents, set by SLACK_DEFAULT_CHANNEL); also `--unregister`,
   `--list`, `--keep-alive`. Reuses or creates Slack apps, auto-evicting the
   oldest retired app when Slack's own app cap is hit (no fixed number in this
@@ -120,7 +120,7 @@ The whole spec. If it's not here, don't build it.
   expires; when the file exists, registration and `--keep-alive` use it and
   never rotate the login pair. Without `--team`, the single service-token file
   selects the team. `--kind` is exactly
-  claude|codex|antigravity. `slack-send` never
+  claude|antigravity. `slack-send` never
   auto-retries a post; a lost response is the same accepted rare-duplicate
   class as inbound.
 - The bridge runs as a systemd user service. On stop it delivers nothing new,

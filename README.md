@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="tests" src="https://img.shields.io/badge/tests-217%20passing-2ea44f">
   <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
-  <img alt="runtimes" src="https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Codex%20%7C%20Antigravity-6f42c1">
+  <img alt="runtimes" src="https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Antigravity-6f42c1">
 </p>
 
 You run long-lived command-line agent sessions in tmux, each with its own working directory, login, and hours of context.
@@ -58,7 +58,7 @@ tmux attach -t work                          # approve the folder trust and bypa
 
 Then DM `@my-agent` in Slack.
 
-Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.md` (or `AGENTS.md` for Codex). Those rules tell an agent when to answer, how to reply with `slack-send`, and when to stay quiet.
+Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.md`. Those rules tell an agent when to answer, how to reply with `slack-send`, and when to stay quiet.
 
 ## Demos
 

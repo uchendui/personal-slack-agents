@@ -149,9 +149,6 @@ def load_agent_configs(directory: Path) -> dict[str, AgentConfig]:
         if kind == "claude":
             profile = Path(values["CLAUDE_CONFIG_DIR"]) if "CLAUDE_CONFIG_DIR" in values else None
             runtime_args = values["CLAUDE_ARGS"]
-        elif kind == "codex":
-            profile = Path(values["CODEX_HOME"])
-            runtime_args = values["CODEX_ARGS"]
         elif kind == "antigravity":
             profile = ANTIGRAVITY_PROFILE_DIR
             runtime_args = ""
@@ -599,8 +596,6 @@ def _register(name, kind, workdir, profile, runtime_args, team, joins, session=N
             _join_channels(values, joins)
         if kind == "claude":
             profile_key, args_key = "CLAUDE_CONFIG_DIR", "CLAUDE_ARGS"
-        elif kind == "codex":
-            profile_key, args_key = "CODEX_HOME", "CODEX_ARGS"
         elif kind == "antigravity":
             profile_key, args_key = None, None
         else:
@@ -795,13 +790,11 @@ def joins(extra):
 def run(argv=None):
     parser = argparse.ArgumentParser(prog="slack-register")
     parser.add_argument("name", nargs="?")
-    parser.add_argument("--kind", choices=("claude", "codex", "antigravity"))
+    parser.add_argument("--kind", choices=("claude", "antigravity"))
     parser.add_argument("--workdir", type=Path)
     parser.add_argument("--claude-config-dir", type=Path)
     parser.add_argument("--claude-args")
     parser.add_argument("--launcher", help="claude or a command prefix that runs Claude Code; omitted keeps the stored one")
-    parser.add_argument("--codex-home", type=Path)
-    parser.add_argument("--codex-args", default="")
     parser.add_argument("--team")
     parser.add_argument("--join", action="append")
     parser.add_argument("--list", action="store_true")
@@ -828,8 +821,6 @@ def run(argv=None):
         if not args.name or not args.kind or args.workdir is None:
             parser.error("registration requires name, --kind, and --workdir")
         if args.kind == "claude":
-            if args.codex_home is not None or args.codex_args:
-                parser.error("claude registration requires only Claude profile flags")
             runtime_args = args.claude_args if args.claude_args is not None else _live_claude_args()
             config_dir = args.claude_config_dir or os.environ.get("CLAUDE_CONFIG_DIR")
             profile = Path(config_dir) if config_dir else None
@@ -837,14 +828,9 @@ def run(argv=None):
                 launcher = None if args.launcher is None else resolve_launcher(args.launcher)
             except ValueError as exc:
                 parser.error(f"--launcher: {exc}")
-        elif args.kind == "codex":
-            launcher = None
-            if args.codex_home is None or args.claude_config_dir is not None or args.claude_args or args.launcher:
-                parser.error("codex registration requires only Codex profile flags")
-            profile, runtime_args = (args.codex_home, args.codex_args)
         else:
             launcher = None
-            if args.claude_config_dir is not None or args.claude_args or args.codex_home is not None or args.codex_args or args.launcher:
+            if args.claude_config_dir is not None or args.claude_args or args.launcher:
                 parser.error("antigravity registration accepts no profile or runtime flags")
             profile, runtime_args = (ANTIGRAVITY_PROFILE_DIR, "")
         _register(

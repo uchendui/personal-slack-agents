@@ -40,14 +40,4 @@ RUNTIMES: dict[str, RuntimeSpec] = {
         background_context_template="[Slack background context; no reply expected]\n[{timestamp}] {user}: {text}",
         unsupported_controls=frozenset(),
     ),
-    "codex": RuntimeSpec(
-        name="codex",
-        adapter_file="claude-pty-broker.py",
-        cli_command=("claude",),
-        config_env_var="CLAUDE_CONFIG_DIR",
-        session_discovery_mode="registry",
-        transcript_mode="status_file",
-        background_context_template="[Slack background context; no reply expected]\n[{timestamp}] {user}: {text}",
-        unsupported_controls=frozenset(),
-    ),
 }

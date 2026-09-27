@@ -1,4 +1,4 @@
-These are rules for agents on this Slack bridge; paste the block below into your CLAUDE.md (or AGENTS.md for Codex).
+These are rules for agents on this Slack bridge; paste the block below into your CLAUDE.md.
 
 ## Slack
 

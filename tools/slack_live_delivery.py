@@ -317,7 +317,7 @@ class Delivery:
             )
         else:
             path, entry = self._find_session(config.session_id, config.profile_dir)
-            ref = self._ref(path, entry, "claude" if runtime_name in ("claude", "codex") else runtime_name)
+            ref = self._ref(path, entry, runtime_name)
 
         if ref.name != config.name:
             raise LookupError(

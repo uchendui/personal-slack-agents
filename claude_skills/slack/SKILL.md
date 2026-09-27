@@ -31,10 +31,6 @@ login profile, and replies land back in the Slack thread.
      --claude-config-dir <this session's config dir>
    ```
 
-   For a codex identity (only when explicitly asked to register a codex
-   agent): `slack-register <name> --team <TEAM_ID> --kind codex --workdir <working directory>
-   --codex-home <profile dir>`.
-
    For an Antigravity (agy) session, which is the case whenever the
    environment variable `ANTIGRAVITY_PTY_BROKER_PID` is set: skip step 2 and
    run `slack-register <name> --team <TEAM_ID> --kind antigravity --workdir <working directory>`
