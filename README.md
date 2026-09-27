@@ -214,6 +214,18 @@ The fix is a service token per computer, which never expires and is separate fro
 `slack-register` and its keep-alive then use that token and never rotate the login pair.
 Reference: https://docs.slack.dev/tools/slack-cli/reference/commands/slack_auth_token/
 
+## Stop or remove
+
+Stop the bridge and its timers, now and at every login:
+
+```bash
+systemctl --user disable --now $(systemctl --user list-unit-files 'slack-*' --no-legend | cut -d' ' -f1)
+```
+
+Agent sessions keep running in tmux until you end them, for example with `tmux kill-session -t work`.
+Start everything again with `setup/setup-slack-bridge.sh`.
+Delete an agent's Slack app with `slack-admin delete-app my-agent`.
+
 ## Tests
 
 ```bash
