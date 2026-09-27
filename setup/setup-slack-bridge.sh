@@ -51,6 +51,8 @@ After=network-online.target
 [Service]
 Type=simple
 UMask=0077
+# Sessions the bridge restarts inherit this PATH and need slack-send and claude from ~/.local/bin.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=%h/.local/share/slack-bridge/venv/bin/python %h/.local/bin/slack-bridge
 Restart=on-failure
 RestartSec=5s
