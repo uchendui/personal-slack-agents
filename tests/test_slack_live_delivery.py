@@ -260,7 +260,7 @@ class DeliveryTest(unittest.IsolatedAsyncioTestCase):
 class ReviveParentTest(unittest.IsolatedAsyncioTestCase):
     def _config(self):
         return SimpleNamespace(
-            profile_dir=Path("/profile"), session_id="sess-1", launcher="claude", launcher_path=None,
+            profile_dir=Path("/profile"), session_id="sess-1", launcher="/usr/bin/claude", launcher_path="/usr/bin",
             runtime_args="--model sonnet", name="agent", workdir=Path("/work"),
         )
 
@@ -285,9 +285,17 @@ class ReviveParentTest(unittest.IsolatedAsyncioTestCase):
         launched = popen.call_args_list[1].args[0]
         self.assertEqual(
             launched[-1],
-            f"env CLAUDE_CONFIG_DIR=/profile {Path.home()}/.local/bin/claude-pty-broker -- "
-            f"{Path.home()}/.local/bin/claude --resume sess-1 --model sonnet",
+            f"env CLAUDE_CONFIG_DIR=/profile PATH=/usr/bin {Path.home()}/.local/bin/claude-pty-broker -- "
+            "/usr/bin/claude --resume sess-1 --model sonnet",
         )
+
+    async def test_missing_stored_launcher_fails_before_tmux(self):
+        config = self._config()
+        config.launcher = None
+        popen = mock.Mock()
+        with self.assertRaisesRegex(RuntimeError, "rerun slack-spawn agent"):
+            await module.Delivery(popen=popen).revive_parent(config)
+        popen.assert_not_called()
 
     async def test_stored_launcher_resumes_behind_the_broker(self):
         config = self._config()

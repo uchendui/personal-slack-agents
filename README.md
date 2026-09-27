@@ -172,8 +172,7 @@ slack-spawn <name> --tmux-session <session> [--join <channel>] [--launcher "<com
 - When the bridge restarts a session, it starts it through the same launcher.
 
 `--claude-config-dir` picks the Claude config directory, which is the account. It defaults to `CLAUDE_CONFIG_DIR`.
-`--launcher` is the command that starts Claude Code. The default is `claude`.
-Any other launcher is a command prefix, such as `ccr cc-work cli --`.
+`--launcher` is the command that starts Claude Code: `claude` (the default) or a command prefix such as `ccr cc-work cli --`.
 Its first word must be on `PATH` when you run `slack-spawn`.
 `slack-spawn` stores that word as an absolute path, together with your `PATH` at that time, and every restart uses both.
 The session then runs `<launcher> --session-id <id> --name <name> <flags>` behind `claude-pty-broker`.

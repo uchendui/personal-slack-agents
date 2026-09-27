@@ -138,32 +138,23 @@ def open_conversation_ids(pid: int, root: Path, proc_root: Path = Path("/proc"))
 
 
 def launch_command(
-    profile_dir: Path | None, launcher: str, launcher_path: str | None, session_flags: str, runtime_args: str
+    profile_dir: Path | None, launcher: str, launcher_path: str, session_flags: str, runtime_args: str
 ) -> str:
     """The command a tmux window runs to start or resume a Claude session
     under profile_dir.
 
-    launcher is "claude" or a stored, already quoted command prefix that
-    runs Claude Code (such as a claude-code-router profile). Either runs
+    launcher is a stored, already quoted command prefix whose program is
+    absolute (claude itself, or a claude-code-router profile). It runs
     under claude-pty-broker: discover_parent finds a live session only
     through the broker's advertisement, and the bridge's systemd PATH lacks
-    ~/.local/bin, so the binaries are named absolutely. A custom launcher
-    also runs under launcher_path, the PATH of the shell that spawned it,
-    because its own children (node for ccr, then claude) are found by PATH."""
+    ~/.local/bin, so the broker is named absolutely. The launcher runs under
+    launcher_path, the PATH of the shell that registered it, because its own
+    children (node, then claude) are found by PATH."""
     flags = f"{session_flags} {runtime_args}".rstrip()
-    local_bin = Path.home() / ".local" / "bin"
+    broker = Path.home() / ".local" / "bin" / "claude-pty-broker"
     # No profile_dir leaves CLAUDE_CONFIG_DIR unset, as a plain `claude` runs.
     environment = "" if profile_dir is None else f" CLAUDE_CONFIG_DIR={shlex.quote(str(profile_dir))}"
-    if launcher == "claude":
-        program = shlex.quote(str(local_bin / "claude"))
-    else:
-        program = launcher
-        environment += f" PATH={shlex.quote(launcher_path)}"
-    return (
-        f"env{environment} "
-        f"{shlex.quote(str(local_bin / 'claude-pty-broker'))} -- "
-        f"{program} {flags}"
-    )
+    return f"env{environment} PATH={shlex.quote(launcher_path)} {shlex.quote(str(broker))} -- {launcher} {flags}"
 
 
 class SessionNotFound(LookupError):
@@ -459,6 +450,8 @@ class Delivery:
     async def revive_parent(self, config: Any) -> ParentRef:
         """Resume a dead claude session in a detached tmux window and poll
         discover_parent until it re-registers."""
+        if config.launcher is None:
+            raise RuntimeError(f"{config.name} has no stored launcher; rerun slack-spawn {config.name}")
         command = launch_command(
             config.profile_dir, config.launcher, config.launcher_path, f"--resume {shlex.quote(config.session_id)}", config.runtime_args
         )

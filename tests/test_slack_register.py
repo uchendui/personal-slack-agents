@@ -54,6 +54,8 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
             mock.patch.object(module, "PTY_STATE_DIR", self.pty),
             mock.patch.object(module, "SLACK_CREDENTIALS", self.root / "credentials.json"),
             mock.patch.object(module.socket, "gethostname", return_value="machine-test"),
+            # Registration resolves the default launcher from PATH.
+            mock.patch.object(module.shutil, "which", return_value="/usr/bin/claude"),
         )
         for patch in self.patches:
             patch.start()
@@ -221,7 +223,22 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(saved["last_registered"], 10)
         announce.assert_called_once_with("test-agent", mock.ANY)
 
-    def test_launcher_is_stored_with_path_kept_by_self_registration_and_cleared_by_claude(self):
+    def test_default_launcher_is_claude_found_on_path(self):
+        with (
+            mock.patch.object(module, "_credentials", return_value=credentials()),
+            mock.patch.object(module, "_announce"),
+            mock.patch.object(module.shutil, "which", return_value="/opt/npm/bin/claude"),
+            mock.patch.dict(os.environ, {"PATH": "/opt/npm/bin:/usr/bin"}),
+        ):
+            module._register("test-agent", "claude", Path("/work"), None, "", None, ())
+        loaded = module.load_agent_configs(self.agents)["test-agent"]
+        command = module.slack_live_delivery.launch_command(
+            loaded.profile_dir, loaded.launcher, loaded.launcher_path, "--resume s", ""
+        )
+        self.assertTrue(command.startswith("env PATH=/opt/npm/bin:/usr/bin "), command)
+        self.assertTrue(command.endswith(" -- /opt/npm/bin/claude --resume s"), command)
+
+    def test_launcher_is_stored_with_path_and_kept_by_self_registration(self):
         self.write_registered()
         with (
             mock.patch.object(module, "_api", return_value={"user_id": "B-test"}),
@@ -234,10 +251,6 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
             loaded = module.load_agent_configs(self.agents)["test-agent"]
             self.assertEqual((loaded.launcher, loaded.launcher_path),
                              ("/opt/bin/ccr cc-work cli --", "/opt/node/bin:/usr/bin"))
-            module._register("test-agent", "claude", Path("/work"), Path("/profile"), "", None, (),
-                             launcher="claude")
-        loaded = module.load_agent_configs(self.agents)["test-agent"]
-        self.assertEqual((loaded.launcher, loaded.launcher_path), ("claude", None))
 
     def test_unset_config_dir_loads_and_revives_without_claude_config_dir(self):
         with (

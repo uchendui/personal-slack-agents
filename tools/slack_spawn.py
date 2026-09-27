@@ -40,7 +40,7 @@ def run(argv=None):
     # model flags never carry over to it.
     if args.model:
         runtime_args = f"--model {shlex.quote(args.model)}"
-    elif launcher == "claude":
+    elif args.launcher == "claude":
         # Run from a plain shell there is no live session to copy, so Claude Code's own defaults apply.
         try:
             runtime_args = slack_register._live_claude_args()

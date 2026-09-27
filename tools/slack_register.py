@@ -54,7 +54,7 @@ class AgentConfig:
     operator_user_id: str
     profile_dir: Path | None
     runtime_args: str
-    launcher: str
+    launcher: str | None
     launcher_path: str | None
     session_id: str | None
 
@@ -168,7 +168,7 @@ def load_agent_configs(directory: Path) -> dict[str, AgentConfig]:
             values["OPERATOR_USER_ID"],
             profile,
             runtime_args,
-            values.get("CLAUDE_LAUNCHER", "claude"),
+            values.get("CLAUDE_LAUNCHER"),
             values.get("CLAUDE_LAUNCHER_PATH"),
             record["session_id"],
         )
@@ -570,8 +570,6 @@ def resolve_launcher(text: str) -> str:
     """The launcher command prefix with its program made absolute, because
     the bridge revives under systemd, whose PATH lacks the user's. Raises
     ValueError for unbalanced quotes or a program not on PATH."""
-    if text == "claude":
-        return text
     words = shlex.split(text)
     program = shutil.which(words[0]) if words else None
     if program is None:
@@ -608,12 +606,9 @@ def _register(name, kind, workdir, profile, runtime_args, team, joins, session=N
         if args_key is not None:
             values[args_key] = runtime_args
         # A session registering itself passes no launcher and keeps the one
-        # slack-spawn stored; "claude" is the default and is not stored. A
-        # custom launcher is stored with this shell's PATH, which it needs.
-        if launcher == "claude":
-            for key in LAUNCHER_KEYS:
-                values.pop(key, None)
-        elif launcher is not None:
+        # slack-spawn stored. A launcher is stored with this shell's PATH,
+        # which its own children (node, claude) are found by.
+        if launcher is not None:
             values.update({"CLAUDE_LAUNCHER": launcher, "CLAUDE_LAUNCHER_PATH": os.environ["PATH"]})
         if kind != "antigravity":
             session = session or os.environ.get("CLAUDE_CODE_SESSION_ID") or (previous or {}).get("session_id")
@@ -632,6 +627,11 @@ def _register(name, kind, workdir, profile, runtime_args, team, joins, session=N
             if launcher is None:
                 old = _env(AGENTS_DIR / f"{other}.env")
                 values.update({key: old[key] for key in LAUNCHER_KEYS if key in old})
+        if kind == "claude" and "CLAUDE_LAUNCHER" not in values:
+            try:
+                values.update({"CLAUDE_LAUNCHER": resolve_launcher("claude"), "CLAUDE_LAUNCHER_PATH": os.environ["PATH"]})
+            except ValueError as exc:
+                raise RegisterError(f"default launcher: {exc}") from exc
         for other in retired:
             registry["tombstones"][other] = registry["agents"].pop(other) | {"session_id": None}
         registry["agents"][name] = {

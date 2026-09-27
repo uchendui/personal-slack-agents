@@ -25,7 +25,9 @@ class SpawnTest(unittest.TestCase):
             stdout = "/work/admin\n" if argv[1] == "display-message" else ""
             return subprocess.CompletedProcess(argv, 0, stdout, "")
 
-        with mock.patch.object(module.subprocess, "run", side_effect=fake_run), \
+        with mock.patch.object(module.slack_register.shutil, "which", return_value="/opt/npm/bin/claude"), \
+             mock.patch.dict(module.os.environ, {"PATH": "/opt/npm/bin:/usr/bin"}), \
+             mock.patch.object(module.subprocess, "run", side_effect=fake_run), \
              mock.patch.object(module.slack_register, "_live_claude_args", return_value="--model opus"), \
              mock.patch.object(module.slack_register, "_register") as register:
             module.run(["admin-agent", "--tmux-session", "admin", "--join", "ops",
@@ -39,8 +41,8 @@ class SpawnTest(unittest.TestCase):
         home_bin = Path.home() / ".local" / "bin"
         self.assertEqual(calls[1], (
             "tmux", "new-window", "-d", "-t", "admin:", "-n", "admin-agent", "-c", "/work/admin",
-            f"env CLAUDE_CONFIG_DIR=/profiles/claude {home_bin / 'claude-pty-broker'} -- "
-            f"{home_bin / 'claude'} --session-id {session} --name admin-agent --model opus "
+            f"env CLAUDE_CONFIG_DIR=/profiles/claude PATH=/opt/npm/bin:/usr/bin {home_bin / 'claude-pty-broker'} -- "
+            f"/opt/npm/bin/claude --session-id {session} --name admin-agent --model opus "
             "--dangerously-skip-permissions",
         ))
 
@@ -53,7 +55,9 @@ class SpawnTest(unittest.TestCase):
             return subprocess.CompletedProcess(argv, 0, stdout, "")
 
         environment = {key: value for key, value in module.os.environ.items() if key != "CLAUDE_CONFIG_DIR"}
+        environment["PATH"] = "/usr/bin"
         with mock.patch.dict(module.os.environ, environment, clear=True), \
+             mock.patch.object(module.slack_register.shutil, "which", return_value="/usr/bin/claude"), \
              mock.patch.object(module.subprocess, "run", side_effect=fake_run), \
              mock.patch.object(module.slack_register, "_live_claude_args",
                                side_effect=module.slack_register.RegisterError("no live claude")), \
@@ -64,7 +68,7 @@ class SpawnTest(unittest.TestCase):
         self.assertEqual(args[3:5], (None, "--dangerously-skip-permissions"))
         home_bin = Path.home() / ".local" / "bin"
         self.assertEqual(module.shlex.split(calls[1][-1]), [
-            "env", str(home_bin / "claude-pty-broker"), "--", str(home_bin / "claude"),
+            "env", "PATH=/usr/bin", str(home_bin / "claude-pty-broker"), "--", "/usr/bin/claude",
             "--session-id", kwargs["session"], "--name", "plain-agent", "--dangerously-skip-permissions",
         ])
 
