@@ -463,6 +463,9 @@ class Delivery:
                 "-c", str(config.workdir), command,
             ]
             code, stderr = await asyncio.to_thread(self._run_tmux, session)
+            # A concurrent revive created the session first; join it.
+            if code != 0 and b"duplicate session" in stderr.lower():
+                code, stderr = await asyncio.to_thread(self._run_tmux, window[:3] + ["-t", "revive:"] + window[3:])
         if code != 0:
             raise RuntimeError(stderr.decode(errors="replace").strip() or "tmux exited nonzero")
         deadline = time.monotonic() + REVIVE_TIMEOUT

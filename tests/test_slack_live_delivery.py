@@ -289,6 +289,17 @@ class ReviveParentTest(unittest.IsolatedAsyncioTestCase):
             "/usr/bin/claude --resume sess-1 --model sonnet",
         )
 
+    async def test_concurrent_revive_joins_the_session_another_revive_created(self):
+        results = [(1, b"no server running on default"), (1, b"duplicate session: revive"), (0, b"")]
+        delivery = module.Delivery()
+        parent = module.ParentRef("sess-1", "agent", "claude", 42, "7", Path("42.json"))
+        with (
+            mock.patch.object(delivery, "_run_tmux", side_effect=results) as run_tmux,
+            mock.patch.object(delivery, "discover_parent", mock.AsyncMock(return_value=parent)),
+        ):
+            self.assertIs(await delivery.revive_parent(self._config()), parent)
+        self.assertEqual(run_tmux.call_args_list[2].args[0][:5], ["tmux", "new-window", "-d", "-t", "revive:"])
+
     async def test_missing_stored_launcher_fails_before_tmux(self):
         config = self._config()
         config.launcher = None
