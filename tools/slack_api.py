@@ -103,41 +103,54 @@ class SlackAPI:
 
     async def run(self, callback, on_reconnect=None) -> None:
         connections = 0
+        backoff = 1.0
         while not self._closed:
-            opened = await self._call("apps.connections.open", self.config.app_token)
-            url = opened.get("url")
-            if not isinstance(url, str):
-                raise SlackError("apps.connections.open returned no WebSocket URL")
-            queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+            try:
+                opened = await self._call("apps.connections.open", self.config.app_token)
+                url = opened.get("url")
+                if not isinstance(url, str):
+                    raise SlackError("apps.connections.open returned no WebSocket URL")
+                queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
 
-            async def consume() -> None:
-                while (payload := await queue.get()) is not None:
-                    await callback(payload)
+                async def consume() -> None:
+                    while (payload := await queue.get()) is not None:
+                        await callback(payload)
 
-            async with websockets.connect(url, max_size=2**22) as websocket:
-                connections += 1
-                LOG.info("socket opened (connection %d)", connections)
-                self._websocket = websocket
-                consumer = asyncio.create_task(consume())
-                consumer.add_done_callback(
-                    lambda _: asyncio.create_task(websocket.close())
-                )
-                # A replay runs as a task so _serve acks frames while it reads
-                # history; awaiting it first would stall every ack past the
-                # three seconds after which Slack redelivers the event.
-                replay = (
-                    asyncio.create_task(on_reconnect())
-                    if on_reconnect is not None and connections > 1
-                    else None
-                )
-                try:
-                    LOG.info("socket closed: %s", await self._serve(websocket, queue))
-                finally:
-                    if replay is not None:
-                        await replay
-                    queue.put_nowait(None)
-                    await consumer
-                    self._websocket = None
+                async with websockets.connect(url, max_size=2**22) as websocket:
+                    connections += 1
+                    backoff = 1.0
+                    LOG.info("socket opened (connection %d)", connections)
+                    self._websocket = websocket
+                    consumer = asyncio.create_task(consume())
+                    consumer.add_done_callback(
+                        lambda _: asyncio.create_task(websocket.close())
+                    )
+                    # A replay runs as a task so _serve acks frames while it reads
+                    # history; awaiting it first would stall every ack past the
+                    # three seconds after which Slack redelivers the event.
+                    replay = (
+                        asyncio.create_task(on_reconnect())
+                        if on_reconnect is not None and connections > 1
+                        else None
+                    )
+                    try:
+                        LOG.info("socket closed: %s", await self._serve(websocket, queue))
+                    finally:
+                        if replay is not None:
+                            await replay
+                        queue.put_nowait(None)
+                        await consumer
+                        self._websocket = None
+            except Exception as exc:
+                if self._closed:
+                    break
+                if isinstance(exc, SlackError) and any(
+                    err in str(exc) for err in ("invalid_auth", "token_revoked", "account_inactive")
+                ):
+                    raise
+                LOG.warning("socket connection failed: %s; retrying in %.1fs", exc, backoff)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 30.0)
 
     async def _serve(self, websocket, queue) -> str:
         """One Socket Mode connection; a close from Slack ends it quietly so

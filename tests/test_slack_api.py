@@ -130,6 +130,33 @@ class SlackAPITest(unittest.IsolatedAsyncioTestCase):
             await slack.run(callback, on_reconnect=on_reconnect)
         self.assertEqual(replayed_on, [2])
 
+    async def test_socket_reconnect_retries_transport_errors_with_backoff(self):
+        sockets = [
+            Socket([json.dumps({"type": "disconnect"})]),
+            Socket([json.dumps({"type": "events_api", "payload": {"n": 1}})]),
+        ]
+        slack = api()
+        # First call succeeds; second call fails with transient network error; third call succeeds.
+        slack._call = mock.AsyncMock(
+            side_effect=[
+                {"url": "wss://first"},
+                module.SlackError("Slack apps.connections.open transport failed: network down"),
+                {"url": "wss://third"},
+            ]
+        )
+        handled = []
+
+        async def callback(payload):
+            handled.append(payload["n"])
+            await slack.close()
+
+        with mock.patch.object(module.websockets, "connect", side_effect=sockets), \
+             mock.patch.object(module.asyncio, "sleep", return_value=None) as sleep_mock:
+            await slack.run(callback)
+
+        self.assertEqual(handled, [1])
+        sleep_mock.assert_awaited_once_with(1.0)
+
     async def test_cursor_pages_are_all_required_and_returned_in_order(self):
         slack = api()
         slack._call = mock.AsyncMock(side_effect=[

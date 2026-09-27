@@ -49,7 +49,7 @@ The whole spec. If it's not here, don't build it.
   bridge injecting messages and slash-command controls (`/clear`,
   `/compact`, `/goal`, model/effort) into the live session, and `!stop`'s
   Ctrl+C interrupt. Sessions post replies by invoking `slack-send --as
-  <agent>`; only that helper reads the owner-only credential file and calls
+  <agent>`; that helper reads the owner-only credential file and calls
   the Slack API. Token text never enters a session's prompt, context, or
   environment, and the bridge never extracts or posts agent-generated replies
   (bridge-owned operational posts — warnings, refusals, lifecycle results —

@@ -3,7 +3,7 @@
 <p align="center"><b>DM your own Claude Code, Codex, and Gemini sessions from Slack, and they answer in the thread.</b></p>
 
 <p align="center">
-  <img alt="tests" src="https://img.shields.io/badge/tests-219%20passing-2ea44f">
+  <img alt="tests" src="https://img.shields.io/badge/tests-222%20passing-2ea44f">
   <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
   <img alt="runtimes" src="https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Antigravity-6f42c1">
 </p>
@@ -51,9 +51,9 @@ slack-spawn my-agent --tmux-session work     # new agent in that session, with i
 tmux attach -t work:my-agent                 # approve the folder trust and bypass-permissions prompts, then Ctrl-b d
 ```
 
-Then DM `@my-agent` in Slack.
-
 Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.md`. Those rules tell an agent when to answer, how to reply with `slack-send`, and when to stay quiet.
+
+Then DM `@my-agent` in Slack.
 
 ## Demos
 

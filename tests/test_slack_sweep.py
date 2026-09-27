@@ -96,6 +96,20 @@ class SlackSweepTest(unittest.TestCase):
         self.delete.assert_not_called()
         self.assertFalse(self.state.exists())
 
+    def test_sweep_returns_cleanly_when_no_apps_are_retired(self):
+        self.stub([], [])
+        with mock.patch.object(module.slack_register, "load_registry", return_value={"tombstones": {}}):
+            self.assertEqual(self.sweep(), "")
+        self.delete.assert_not_called()
+
+    def test_sweep_returns_cleanly_when_no_bot_tokens_exist(self):
+        self.stub([], [])
+        with mock.patch.object(
+            module.slack_admin, "_any_bot_token", side_effect=module.slack_admin.AdminError("no local agents")
+        ):
+            self.assertEqual(self.sweep(), "")
+        self.delete.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

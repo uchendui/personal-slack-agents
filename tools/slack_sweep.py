@@ -84,9 +84,15 @@ def sweep(hours: float, dry_run: bool) -> None:
     # Only retired apps: activity is read from channel history, not thread
     # replies, so a registered agent that answers only in threads looks idle.
     retired = {record["app_id"] for record in registry["tombstones"].values()}
+    if not retired:
+        return
+    try:
+        bot_token = slack_admin._any_bot_token()
+    except slack_admin.AdminError:
+        return
     # The admin user token has no users:read; agent bot tokens do, as
     # slack_admin._resolve_app already relies on.
-    for user_id, user in sorted(bots(slack_admin._any_bot_token()).items()):
+    for user_id, user in sorted(bots(bot_token).items()):
         if state.get(user_id, 0.0) >= cutoff:
             continue
         name = user.get("name") or user_id
