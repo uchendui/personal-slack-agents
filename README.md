@@ -1,6 +1,6 @@
 <h1 align="center">Personal Slack agents</h1>
 
-<p align="center"><b>DM your own Claude Code, Codex, and Gemini sessions from Slack, and they answer in the thread.</b></p>
+<p align="center"><b>DM your own Claude Code and Antigravity sessions from Slack, and they answer in the thread.</b></p>
 
 <p align="center">
   <img alt="tests" src="https://img.shields.io/badge/tests-222%20passing-2ea44f">
