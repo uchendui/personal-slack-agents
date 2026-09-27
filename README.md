@@ -15,6 +15,22 @@ Agents run in Claude Code (recommended) or Antigravity. To use Codex, Gemini, or
 
 <p align="center"><img src="docs/images/test-fix.gif" alt="A Slack thread on the left asks an agent to fix a failing test; the agent's tmux pane on the right edits the file; the diff is posted back in the thread"></p>
 
+## How it works
+
+```
+         Slack DM · @-mention · file · !control
+                          │
+                          ▼
+           slack-bridge (systemd user service)
+          Socket Mode · operator check · routing
+                          │
+                          ▼
+            PTY broker → claude or agy in tmux
+                          │
+                          ▼
+              slack-send → reply in the thread
+```
+
 ## What you can do
 
 | In Slack | What happens |
