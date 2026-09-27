@@ -65,6 +65,23 @@ slack-spawn codex-agent --tmux-session work --launcher "ccr cc-codex cli --" \
   --claude-config-dir ~/.claude-code-router/profiles/cc-codex/claude
 ```
 
+### Codex and Gemini
+
+`setup/setup-model-router.py` installs claude-code-router 3.0.20 and makes two profiles: `cc-codex` for your Codex login and `cc-gemini` for Gemini API keys.
+
+Requirements:
+- Node.js 22 or newer, and npm.
+- For Codex: the `codex` CLI.
+- For Gemini: your API keys in `~/.gemini_api_keys`, separated by commas or whitespace. A local router on 127.0.0.1:3460 rotates them.
+
+```
+python3 setup/setup-model-router.py
+slack-spawn codex-agent --tmux-session work --launcher "ccr cc-codex cli --" \
+  --claude-config-dir ~/.claude-code-router/profiles/cc-codex/claude
+slack-spawn gemini-agent --tmux-session work --launcher "ccr cc-gemini cli --" \
+  --claude-config-dir ~/.claude-code-router/profiles/cc-gemini/claude
+```
+
 ## Two or more computers on one Slack account
 
 Agents on different computers can share one Slack workspace and talk in one thread.

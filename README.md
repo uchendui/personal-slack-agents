@@ -3,7 +3,7 @@
 <p align="center"><b>DM your own Claude Code and Antigravity sessions from Slack, and they answer in the thread.</b></p>
 
 <p align="center">
-  <img alt="tests" src="https://img.shields.io/badge/tests-222%20passing-2ea44f">
+  <img alt="tests" src="https://img.shields.io/badge/tests-251%20passing-2ea44f">
   <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
   <img alt="runtimes" src="https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Antigravity-6f42c1">
 </p>
@@ -11,7 +11,7 @@
 Each command-line agent session you run in tmux gets its own Slack bot.
 DM the bot or @-mention it, and the message lands in the live session as if you typed it; the answer comes back in the thread.
 
-Agents run in Claude Code (recommended) or Antigravity. To use Codex, Gemini, or another model, run it inside Claude Code through [claude-code-router](https://github.com/musistudio/claude-code-router).
+Agents run in Claude Code (recommended) or Antigravity. To use Codex, Gemini, or another model, run it inside Claude Code through [claude-code-router](https://github.com/musistudio/claude-code-router); [one script](docs/setup.md#codex-and-gemini) sets up Codex and Gemini.
 
 <p align="center"><img src="docs/images/test-fix.gif" alt="A Slack thread on the left asks an agent to fix a failing test; the agent's tmux pane on the right edits the file; the diff is posted back in the thread"></p>
 
