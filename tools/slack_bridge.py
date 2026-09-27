@@ -27,7 +27,7 @@ from typing import Any
 import slack_api
 import slack_live_delivery as terminal
 import slack_register
-from runtimes import RUNTIMES
+from runtimes import BACKGROUND_CONTEXT_TEMPLATE, RUNTIMES
 
 LOG = logging.getLogger("slack-bridge")
 MAX_SEEN = 5_000
@@ -421,8 +421,7 @@ class Bridge:
             # A bot-authored message in a thread this agent is not addressed in
             # is another agent's traffic: no delivery and no read receipt.
             if config.deliver_channel_messages and not thread_ts:
-                spec = RUNTIMES.get(getattr(parent, "runtime", "claude"), RUNTIMES["claude"])
-                chatter = spec.background_context_template.format(
+                chatter = BACKGROUND_CONTEXT_TEMPLATE.format(
                     user=user or "unknown", text=text, timestamp=timestamp
                 )
                 await self._inject_batched(agent, parent, chatter)

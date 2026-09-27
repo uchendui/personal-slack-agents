@@ -15,9 +15,10 @@ class RuntimeSpec:
     config_env_var: str | None
     session_discovery_mode: str  # "registry" or "pty_advertisement"
     transcript_mode: str  # "status_file" or "jsonl_done"
-    background_context_template: str
     unsupported_controls: frozenset[str] = frozenset()
 
+
+BACKGROUND_CONTEXT_TEMPLATE = "[Slack background context; no reply expected]\n[{timestamp}] {user}: {text}"
 
 RUNTIMES: dict[str, RuntimeSpec] = {
     "antigravity": RuntimeSpec(
@@ -27,7 +28,6 @@ RUNTIMES: dict[str, RuntimeSpec] = {
         config_env_var=None,
         session_discovery_mode="pty_advertisement",
         transcript_mode="jsonl_done",
-        background_context_template="[Overheard channel background context (do not reply to Slack)]: {user}: {text}",
         unsupported_controls=frozenset({"goal", "clear-goal", "clear", "compact"}),
     ),
     "claude": RuntimeSpec(
@@ -37,7 +37,6 @@ RUNTIMES: dict[str, RuntimeSpec] = {
         config_env_var="CLAUDE_CONFIG_DIR",
         session_discovery_mode="registry",
         transcript_mode="status_file",
-        background_context_template="[Slack background context; no reply expected]\n[{timestamp}] {user}: {text}",
         unsupported_controls=frozenset(),
     ),
 }
