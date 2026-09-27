@@ -1,0 +1,17 @@
+# What runs on its own
+
+- **Idle sessions compact themselves.** After 10 minutes with no input, a Claude Code session gets one `/compact`, so the next message starts from a small context.
+- **Missed messages are delivered after a restart.** The bridge saves the time of the last message it delivered to each agent in `~/.config/slack-bridge/last-seen.json` and delivers anything newer when it starts.
+- **Reconnects re-read five minutes.** After the Slack connection drops and comes back, the bridge reads the last 5 minutes again so nothing sent during the gap is lost.
+- **New agents load without a restart.** Every 5 seconds the bridge checks `~/.config/slack-bridge/agents/` and connects, reconnects, or drops agents to match.
+- **Agents with dead tokens are removed.** When the bridge starts, and whenever it loads a new agent, an agent whose Slack token Slack rejects as inactive, invalid, revoked, or expired is unregistered.
+- **Dead sessions are reopened in tmux.** For a Claude Code agent with a recorded session, a message to it after its session exits reopens that session with `--resume` in a new detached tmux window. If the session has not re-registered within 90 seconds, the bot posts 'Agent session is not live; revive failed: <error>' once in the thread.
+- **Messages close together arrive together.** A message to a live session waits 10 seconds; messages that arrive during the wait are delivered with it as one turn.
+- **Your typing comes first.** A Slack message that arrives while a typed line or paste is unfinished in the terminal waits until you submit or clear it, or 45 seconds after your last keystroke.
+- **Forks get one reminder (Antigravity agents only).** If a fork finishes and has posted nothing 120 seconds later, the bridge tells it once to post its answer; a second miss closes the fork and posts 'Reply fork ended twice without posting a reply.' A fork stays open 5 minutes after each turn for follow-ups, and a turn is cut off after 10 minutes. A fork whose turn has not started within 90 seconds gets its prompt sent once more, then fails. Fork status is kept in `~/.config/slack-bridge/forks.json`, which `slack-forks` reads.
+- **The bot posts some notices itself.** It posts fork failures, 'Control refused: operator only.' for controls from anyone else, 'Renamed to <name>.' after a rename, 'Unregistered <name>.' after an unregister, and 'Control !<cmd> is not supported for <Runtime> sessions.' for a control the runtime lacks.
+- **Slack slowdowns are retried.** When Slack says to slow down, the bridge waits the time Slack names and tries again, up to 5 attempts in all.
+- **Logins switch at a usage limit.** If `CLAUDE_ACCOUNT_CYCLE` is set and the session's transcript records a 'You've reached your ... limit' API error, the broker restarts the same conversation with `--resume` under the next login in the list. It tries a limited login again after 1 hour.
+- **The login token is refreshed before it expires.** The 6-hour keep-alive refreshes the Slack CLI login only when it has less than 7 hours left.
+- **The sweep deletes idle retired bots this machine registered.** Where the admin token exists, the hourly sweep deletes a bot app only when its app id is a tombstone in this machine's `registry.json` and the bot has not posted in any channel the admin user is in for 72 hours. Registered agents and other bots are left alone.
+- **Old broker files are cleaned up.** A starting broker removes socket and state files left by brokers that are no longer running.
