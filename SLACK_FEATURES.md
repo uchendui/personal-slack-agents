@@ -61,7 +61,7 @@ The whole spec. If it's not here, don't build it.
   chatter is dropped silently with no warning.
 
 ## Files
-- Files uploaded with an addressed message are downloaded (maximum 20 MB per
+- Files uploaded with an addressed message are downloaded (maximum 1 GiB per
   file, owner-only perms, into an owner-only temp directory) and their local
   paths handed to the session with the message text. A message with a file
   over the cap is refused outright: the bridge posts an explicit refusal in
