@@ -436,34 +436,6 @@ class BridgeRoutingTest(unittest.IsolatedAsyncioTestCase):
         )
         slack.add_reaction.assert_not_awaited()
 
-    async def test_toggle_controls_type_their_argument(self):
-        for text, command, argument, reply in (
-            ("<@B-test> !fast on", "fast", "on", "Sent /fast on."),
-        ):
-            with self.subTest(text=text):
-                value, slack, transport, parent = bridge()
-                transport.control.return_value = None
-
-                await value.handle("agent", event("toggle", text, user="U-operator"))
-
-                transport.control.assert_awaited_once_with(parent, command, argument)
-                slack.post_operational.assert_awaited_once_with("C-test", "100", reply)
-
-    async def test_antigravity_refuses_claude_only_toggle_controls(self):
-        for command in ("fast",):
-            with self.subTest(command=command):
-                value, slack, transport, _ = bridge(runtime="antigravity")
-
-                await value.handle("agent", event(
-                    "toggle", f"<@B-test> !{command} on", user="U-operator"
-                ))
-
-                transport.control.assert_not_awaited()
-                slack.post_operational.assert_awaited_once_with(
-                    "C-test", "100",
-                    f"Control !{command} is not supported for Antigravity sessions.",
-                )
-
     async def test_effort_control_posts_the_broker_acknowledgment(self):
         value, slack, transport, parent = bridge()
         transport.control.return_value = "Set effort level to xhigh"

@@ -77,7 +77,6 @@ CONTROLS = {
     "rename": Control(keystrokes="/rename {argument}", argument=NAME_RE),
     "clear-goal": Control(keystrokes="/goal clear"),
     "clear": Control(keystrokes="/clear"),
-    "fast": Control(keystrokes="/fast {argument}", argument=("on", "off")),
 }
 
 

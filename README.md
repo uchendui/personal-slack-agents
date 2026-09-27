@@ -23,7 +23,6 @@ Agents run in Claude Code (recommended) or Antigravity. To use Codex, Gemini, or
 | Attach a file | The agent gets it as a local path. It can post files back. |
 | `@agent !stop` | Interrupts the running task. |
 | `@agent !effort high` or `!model <name>` | Changes the effort level or model of the live session. |
-| `@agent !fast on` or `!fast off` | Turns fast mode on or off in a Claude Code session. |
 | `@agent !compact` or `!clear` | Compacts or clears the session context. |
 | `@agent !goal <text>` or `!clear-goal` | Sets or clears a standing goal. |
 | `@agent !rename <name>` or `!unregister` | Renames or removes the agent. |

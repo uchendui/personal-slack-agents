@@ -28,7 +28,7 @@ RUNTIMES: dict[str, RuntimeSpec] = {
         config_env_var=None,
         session_discovery_mode="pty_advertisement",
         transcript_mode="jsonl_done",
-        unsupported_controls=frozenset({"goal", "clear-goal", "clear", "compact", "fast"}),
+        unsupported_controls=frozenset({"goal", "clear-goal", "clear", "compact"}),
     ),
     "claude": RuntimeSpec(
         name="claude",
