@@ -235,6 +235,7 @@ class Bridge:
         self.agent_watch_task: asyncio.Task | None = None
         self.live_batches: dict[str, tuple[Any, list[str], asyncio.Task]] = {}
         self.revive_tasks: dict[str, asyncio.Task] = {}
+        self.operator_apps: dict[str, bool] = {}
 
     async def _revive(self, agent: str, config: slack_register.AgentConfig):
         # Shared per-agent: a second dead message during the wait rides the
@@ -369,6 +370,16 @@ class Bridge:
                 await react(api, channel, timestamp)
                 self._record_seen(agent, timestamp)
             return
+        # Sessions run without permission prompts, so only the operator and
+        # the operator's agents reach them; every other sender is dropped.
+        operators = slack_register.operator_user_ids() | {config.operator_user_id}
+        local_bots = {other.bot_user_id for other in self.configs.values()}
+        if not (
+            user in operators or user in local_bots
+            or await self._operator_app(config, bot_profile)
+        ):
+            LOG.info("%s: dropped %s %s from non-operator %s", agent, channel, timestamp, user)
+            return
         expects_reply = is_dm or mentioned or owned_reply
         # A fork keeps answering a thread it already joined, but only when the
         # message names no other agent: a forked Flash session otherwise
@@ -453,6 +464,22 @@ class Bridge:
             await self._inject_batched(agent, parent, prompt)
         await react(api, channel, timestamp)
         self._record_seen(agent, timestamp)
+
+    async def _operator_app(self, config, bot_profile) -> bool:
+        # A bot whose app the operator's Slack login can manage is one of the
+        # operator's agents, possibly registered on another machine.
+        app_id = bot_profile.get("app_id") if isinstance(bot_profile, dict) else None
+        if not isinstance(app_id, str):
+            return False
+        if app_id not in self.operator_apps:
+            try:
+                await asyncio.to_thread(
+                    slack_register._user_api, "apps.manifest.export", config.team_id, app_id=app_id
+                )
+                self.operator_apps[app_id] = True
+            except slack_register.SlackAPIError:
+                self.operator_apps[app_id] = False
+        return self.operator_apps[app_id]
 
     async def _fork_reply(
         self, agent, api, runtime, parent, channel, root, timestamp, prompt, text=""

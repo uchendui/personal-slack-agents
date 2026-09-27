@@ -24,6 +24,8 @@ delivery_module.SessionNotFound = type("SessionNotFound", (LookupError,), {})
 register_module = types.ModuleType("slack_register")
 register_module.AgentConfig = object
 register_module.operator_user_ids = lambda: set()
+register_module.SlackAPIError = type("SlackAPIError", (Exception,), {})
+register_module._user_api = mock.Mock(return_value={"ok": True})
 spec = importlib.util.spec_from_file_location("slack_bridge_tested", MODULE_PATH)
 bridge_module = importlib.util.module_from_spec(spec)
 with mock.patch.dict(sys.modules, {
@@ -103,7 +105,7 @@ def lifecycle():
 
 def event(event_id, text="work", **changes):
     message = dict(
-        type="message", channel="C-test", ts="100", user="U-human", text=text
+        type="message", channel="C-test", ts="100", user="U-operator", text=text
     )
     message.update(changes)
     return {"event_id": event_id, "team_id": "T-test", "event": message}
@@ -134,7 +136,7 @@ class BridgeRoutingTest(unittest.IsolatedAsyncioTestCase):
             (event("here-broadcast", "<!here> quick one"), None, False, True, True, "100"),
             (event("background"), None, False, True, False, None),
             (event("other-bot", thread_ts="90", user="B-other", bot_id="B-other"), "none", False, False, False, None),
-            (event("peer-in-answered-thread", thread_ts="90", user="B-other", bot_id="B-other"), "member", False, True, True, "90"),
+            (event("peer-in-answered-thread", thread_ts="90", user="B-other", bot_id="B-other", bot_profile={"app_id": "A-other"}), "member", False, True, True, "90"),
             (event("operator-elsewhere", thread_ts="90", user="U-operator"), "none", False, False, False, None),
             (event("operator-answered", thread_ts="90", user="U-operator"), "member", False, True, True, "90"),
             (event("operator-answered-live", thread_ts="90", user="U-operator"), "none", True, True, True, "90"),
@@ -174,7 +176,7 @@ class BridgeRoutingTest(unittest.IsolatedAsyncioTestCase):
         value, _, transport, _ = bridge()
         await value.handle("agent", event(
             "unregistered-bot", channel_type="im", user="U0REMOTE1",
-            bot_id="B-demo", bot_profile={"name": "remote-agent"},
+            bot_id="B-demo", bot_profile={"name": "remote-agent", "app_id": "A-demo"},
         ))
 
         injected = transport.inject.await_args.args[1]
@@ -209,9 +211,30 @@ class BridgeRoutingTest(unittest.IsolatedAsyncioTestCase):
         value, slack, transport, parent = bridge()
         slack.thread_role.return_value = "none"
         await value.handle("agent", event("root", text="<@B-test> and <@B-other> good night", ts="90", user="U-operator"))
-        await value.handle("agent", event("reply", text="other replies", ts="91", thread_ts="90", user="B-other"))
+        await value.handle("agent", event("reply", text="other replies", ts="91", thread_ts="90", user="B-other", bot_id="B-other", bot_profile={"app_id": "A-other"}))
         self.assertEqual(transport.inject.await_count, 2)
         self.assertIn("other replies", transport.inject.await_args.args[1])
+
+    async def test_only_operator_and_operator_agent_messages_are_delivered(self):
+        remote = {"user": "B-remote", "bot_id": "B-remote", "bot_profile": {"app_id": "A-remote"}}
+        for sender, manageable, delivered in (
+            ({"user": "U-stranger"}, True, False),
+            ({"user": "U-operator"}, False, True),
+            ({"user": "B-local", "bot_id": "B-local"}, False, True),
+            (remote, True, True),
+            (remote, False, False),
+        ):
+            with self.subTest(sender=sender, manageable=manageable):
+                value, slack, transport, _ = bridge()
+                value.configs["local"] = config(bot_user_id="B-local")
+                error = None if manageable else register_module.SlackAPIError("no_permission")
+                with mock.patch.object(register_module, "_user_api", side_effect=error) as export:
+                    await value.handle("agent", event("dm", channel_type="im", **sender))
+                    await value.handle("agent", event("dm-2", channel_type="im", ts="101", **sender))
+                if sender is remote:
+                    export.assert_called_once_with("apps.manifest.export", "T-test", app_id="A-remote")
+                self.assertEqual(transport.inject.await_count, 2 * delivered)
+                self.assertEqual(slack.add_reaction.await_count, 2 * delivered)
 
     async def test_addressed_files_are_downloaded_or_the_message_is_refused(self):
         value, slack, transport, parent = bridge()
@@ -876,20 +899,20 @@ class CatchUpTest(unittest.IsolatedAsyncioTestCase):
         value, slack, transport, _ = bridge()
         (value.config_dir / "last-seen.json").write_text('{"agent": "100"}')
         root = {
-            "type": "message", "ts": "101", "user": "U-human",
+            "type": "message", "ts": "101", "user": "U-operator",
             "text": "<@B-test> missed", "latest_reply": "102",
         }
         reply = {
-            "type": "message", "ts": "102", "user": "U-human",
+            "type": "message", "ts": "102", "user": "U-operator",
             "text": "<@B-test> later", "thread_ts": "101",
         }
         # A thread rooted before the watermark: only its reply was missed.
         old_root = {
-            "type": "message", "ts": "090", "user": "U-human",
+            "type": "message", "ts": "090", "user": "U-operator",
             "text": "<@B-test> earlier", "latest_reply": "103",
         }
         old_reply = {
-            "type": "message", "ts": "103", "user": "U-human",
+            "type": "message", "ts": "103", "user": "U-operator",
             "text": "<@B-test> in an old thread", "thread_ts": "090",
         }
 
@@ -1090,8 +1113,8 @@ class CatchUpTest(unittest.IsolatedAsyncioTestCase):
         slack.bot_channels.return_value = ["C-test"]
         slack.history.return_value = []
         slack.since.return_value = [
-            {"type": "message", "ts": "101", "user": "U-human", "text": "<@B-test> before"},
-            {"type": "message", "ts": "102", "user": "U-human", "text": "<@B-test> after"},
+            {"type": "message", "ts": "101", "user": "U-operator", "text": "<@B-test> before"},
+            {"type": "message", "ts": "102", "user": "U-operator", "text": "<@B-test> after"},
         ]
 
         await value._catch_up_agent("agent", "100")

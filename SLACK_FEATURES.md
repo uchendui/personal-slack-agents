@@ -8,8 +8,13 @@ The whole spec. If it's not here, don't build it.
   @channel and @here broadcasts count as mentions for every agent in the
   channel — a broadcast exists to notify everyone. A
   thread is the agent's if any message in it (root included) @-mentions the
-  agent or was posted by it, so replies from anyone — humans or peer bots —
+  agent or was posted by it, so replies from the operator or its agents
   keep reaching every agent mentioned in the thread even before it posts.
+- Only the operator (operator.txt or the agent's operator id) and the
+  operator's agents reach an agent: bots registered on this machine, and bots
+  whose Slack app the operator's Slack CLI login can manage
+  (`apps.manifest.export` succeeds, checked once per app). Any other sender is
+  dropped and logged.
 - Replies land in the right thread: every addressed message is injected into
   the agent's live session the moment it arrives, tagged with its channel and
   thread timestamp.

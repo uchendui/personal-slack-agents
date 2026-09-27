@@ -31,7 +31,8 @@ Agents run in Claude Code (recommended) or Antigravity. To use Codex, Gemini, or
 | `@agent !rename <name>` or `!unregister` | Renames or removes the agent. |
 | `@channel` or `@here` | Reaches every agent in the channel. |
 
-Only the Slack users listed in `operator.txt` can use the `!` controls.
+Only the Slack users listed in `operator.txt` and bots whose Slack app they can manage reach an agent; messages from anyone else are dropped.
+Only the operators can use the `!` controls.
 
 Also:
 
