@@ -605,11 +605,6 @@ def _register(name, kind, workdir, profile, runtime_args, team, joins, session=N
             values[profile_key] = str(profile)
         if args_key is not None:
             values[args_key] = runtime_args
-        # A session registering itself passes no launcher and keeps the one
-        # slack-spawn stored. A launcher is stored with this shell's PATH,
-        # which its own children (node, claude) are found by.
-        if launcher is not None:
-            values.update({"CLAUDE_LAUNCHER": launcher, "CLAUDE_LAUNCHER_PATH": os.environ["PATH"]})
         if kind != "antigravity":
             session = session or os.environ.get("CLAUDE_CODE_SESSION_ID") or (previous or {}).get("session_id")
         # A session re-registering under a new name (harness /rename) retires
@@ -627,11 +622,17 @@ def _register(name, kind, workdir, profile, runtime_args, team, joins, session=N
             if launcher is None:
                 old = _env(AGENTS_DIR / f"{other}.env")
                 values.update({key: old[key] for key in LAUNCHER_KEYS if key in old})
-        if kind == "claude" and "CLAUDE_LAUNCHER" not in values:
+        # The default applies only when neither the caller nor a stored or
+        # retired identity supplied a launcher.
+        if kind == "claude" and launcher is None and "CLAUDE_LAUNCHER" not in values:
             try:
-                values.update({"CLAUDE_LAUNCHER": resolve_launcher("claude"), "CLAUDE_LAUNCHER_PATH": os.environ["PATH"]})
+                launcher = resolve_launcher("claude")
             except ValueError as exc:
                 raise RegisterError(f"default launcher: {exc}") from exc
+        # A launcher is stored with this shell's PATH, which its own children
+        # (node, claude) are found by.
+        if launcher is not None:
+            values.update({"CLAUDE_LAUNCHER": launcher, "CLAUDE_LAUNCHER_PATH": os.environ["PATH"]})
         for other in retired:
             registry["tombstones"][other] = registry["agents"].pop(other) | {"session_id": None}
         registry["agents"][name] = {

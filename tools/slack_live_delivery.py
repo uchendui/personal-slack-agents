@@ -451,7 +451,7 @@ class Delivery:
         """Resume a dead claude session in a detached tmux window and poll
         discover_parent until it re-registers."""
         if config.launcher is None:
-            raise RuntimeError(f"{config.name} has no stored launcher; rerun slack-spawn {config.name}")
+            raise RuntimeError(f"{config.name} has no stored launcher; rerun slack-spawn {config.name} --tmux-session <session>")
         command = launch_command(
             config.profile_dir, config.launcher, config.launcher_path, f"--resume {shlex.quote(config.session_id)}", config.runtime_args
         )

@@ -53,7 +53,7 @@ slack login                          # one-time Slack CLI login on this machine
 
 tmux new-session -d -s work -c ~/your-project   # the agent's tmux session and working directory
 slack-spawn my-agent --tmux-session work     # new agent in that session, with its own Slack bot
-tmux attach -t work                          # approve the folder trust and bypass-permissions prompts, then Ctrl-b d
+tmux attach -t work:my-agent                 # approve the folder trust and bypass-permissions prompts, then Ctrl-b d
 ```
 
 Then DM `@my-agent` in Slack.
