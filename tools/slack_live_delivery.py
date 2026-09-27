@@ -443,6 +443,11 @@ class Delivery:
         return await self._send(ref, "control", payload)
 
     def _run_tmux(self, argv: list[str]) -> tuple[int, bytes]:
+        # new-session is the one tmux command here that can start a server.
+        # Run from the bridge, the server would join the bridge's unit cgroup
+        # and die on every bridge restart; its own scope keeps it alive.
+        if argv[1] == "new-session":
+            argv = ["systemd-run", "--user", "--scope", "--quiet", "--collect", *argv]
         process = self.popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _, stderr = process.communicate()
         return process.returncode, stderr
@@ -455,17 +460,16 @@ class Delivery:
         command = launch_command(
             config.profile_dir, config.launcher, config.launcher_path, f"--resume {shlex.quote(config.session_id)}", config.runtime_args
         )
-        window = ["tmux", "new-window", "-d", "-n", config.name, "-c", str(config.workdir), command]
-        code, stderr = await asyncio.to_thread(self._run_tmux, window)
-        if code != 0 and b"no server running" in stderr.lower():
-            session = [
-                "tmux", "new-session", "-d", "-s", "revive", "-n", config.name,
-                "-c", str(config.workdir), command,
-            ]
-            code, stderr = await asyncio.to_thread(self._run_tmux, session)
-            # A concurrent revive created the session first; join it.
-            if code != 0 and b"duplicate session" in stderr.lower():
-                code, stderr = await asyncio.to_thread(self._run_tmux, window[:3] + ["-t", "revive:"] + window[3:])
+        tail = ["-n", config.name, "-c", str(config.workdir), command]
+        target = "revive"
+        code, _ = await asyncio.to_thread(self._run_tmux, ["tmux", "has-session", "-t", f"={target}"])
+        where = ["new-window", "-d", "-t", f"={target}:"] if code == 0 else ["new-session", "-d", "-s", target]
+        code, stderr = await asyncio.to_thread(self._run_tmux, ["tmux", *where, *tail])
+        # A concurrent revive created the session first; join it.
+        if code != 0 and b"duplicate session" in stderr.lower():
+            code, stderr = await asyncio.to_thread(
+                self._run_tmux, ["tmux", "new-window", "-d", "-t", f"={target}:", *tail]
+            )
         if code != 0:
             raise RuntimeError(stderr.decode(errors="replace").strip() or "tmux exited nonzero")
         deadline = time.monotonic() + REVIVE_TIMEOUT

@@ -264,7 +264,7 @@ class ReviveParentTest(unittest.IsolatedAsyncioTestCase):
             runtime_args="--model sonnet", name="agent", workdir=Path("/work"),
         )
 
-    async def test_falls_back_to_new_session_when_no_tmux_server_and_then_polls_discovery(self):
+    async def test_starts_the_revive_session_in_its_own_scope_when_no_tmux_server_and_then_polls_discovery(self):
         window_fail = mock.Mock()
         window_fail.communicate.return_value = (b"", b"no server running on default")
         window_fail.returncode = 1
@@ -280,8 +280,11 @@ class ReviveParentTest(unittest.IsolatedAsyncioTestCase):
         ):
             result = await delivery.revive_parent(self._config())
         self.assertIs(result, parent)
-        self.assertEqual(popen.call_args_list[0].args[0][:2], ["tmux", "new-window"])
-        self.assertEqual(popen.call_args_list[1].args[0][:2], ["tmux", "new-session"])
+        self.assertEqual(popen.call_args_list[0].args[0], ["tmux", "has-session", "-t", "=revive"])
+        self.assertEqual(
+            popen.call_args_list[1].args[0][:10],
+            ["systemd-run", "--user", "--scope", "--quiet", "--collect", "tmux", "new-session", "-d", "-s", "revive"],
+        )
         launched = popen.call_args_list[1].args[0]
         self.assertEqual(
             launched[-1],
@@ -298,7 +301,7 @@ class ReviveParentTest(unittest.IsolatedAsyncioTestCase):
             mock.patch.object(delivery, "discover_parent", mock.AsyncMock(return_value=parent)),
         ):
             self.assertIs(await delivery.revive_parent(self._config()), parent)
-        self.assertEqual(run_tmux.call_args_list[2].args[0][:5], ["tmux", "new-window", "-d", "-t", "revive:"])
+        self.assertEqual(run_tmux.call_args_list[2].args[0][:5], ["tmux", "new-window", "-d", "-t", "=revive:"])
 
     async def test_missing_stored_launcher_fails_before_tmux(self):
         config = self._config()
@@ -344,7 +347,7 @@ class ReviveParentTest(unittest.IsolatedAsyncioTestCase):
                 await delivery.revive_parent(self._config())
         sleep.assert_not_awaited()
 
-    async def test_new_window_failure_other_than_no_server_raises_without_a_second_attempt(self):
+    async def test_new_session_failure_other_than_duplicate_session_raises_without_a_retry(self):
         failure = mock.Mock()
         failure.communicate.return_value = (b"", b"tmux: command not found")
         failure.returncode = 127
@@ -352,7 +355,7 @@ class ReviveParentTest(unittest.IsolatedAsyncioTestCase):
         delivery = module.Delivery(popen=popen)
         with self.assertRaisesRegex(RuntimeError, "tmux: command not found"):
             await delivery.revive_parent(self._config())
-        popen.assert_called_once()
+        self.assertEqual(popen.call_count, 2)
 
 
 class ForkWorkerTest(unittest.IsolatedAsyncioTestCase):
