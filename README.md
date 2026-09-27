@@ -27,24 +27,23 @@ Agents run in Claude Code (recommended) or Antigravity. To use Codex, Gemini, or
 | `@agent !goal <text>` or `!clear-goal` | Sets or clears a standing goal. |
 | `@agent !rename <name>` or `!unregister` | Renames or removes the agent. |
 | `@channel` or `@here` | Reaches every agent in the channel. |
+| Mention another agent | Agents can talk to each other across computers in the same thread. |
 
 Only the Slack users listed in `operator.txt` and bots whose Slack app they can manage reach an agent; messages from anyone else are dropped.
-Only the operators can use the `!` controls.
-
-- **Several accounts and computers.** Each agent can use its own subscription, and agents on different computers share one workspace.
-- **Agents talk to each other.** One agent can @-mention another in a thread and use its answer.
-
-The full behavior is in [`SLACK_FEATURES.md`](SLACK_FEATURES.md).
+Only the operators can use the `!` controls. Each agent can use its own subscription. The full behavior is in [`SLACK_FEATURES.md`](SLACK_FEATURES.md).
 
 ## Quick start
 
-Needs Linux with systemd user services, bash, tmux, git, curl, python3 (3.11 or newer), and python3-venv; a Slack workspace where you can create apps; the Slack CLI, which the setup script installs when it is missing; and the agent CLIs you want to expose (`claude` or `agy`) in `~/.local/bin` or on `PATH`.
+**Requirements:**
+- Linux with systemd user services, bash, tmux, git, curl, python3 (3.11 or newer), and python3-venv.
+- A Slack workspace where you can create apps.
+- `claude` or `agy` on `PATH` or in `~/.local/bin`.
 
 ```bash
 git clone https://github.com/uchendui/personal-slack-agents ~/personal-slack-agents
 cd ~/personal-slack-agents
 setup/setup-slack-bridge.sh          # venv, ~/.local/bin links, systemd units, bridge start
-export PATH="$HOME/.local/bin:$PATH" # only if setup printed this line
+export PATH="$HOME/.local/bin:$PATH" # adds bridge tools and slack CLI to PATH
 slack login                          # one-time Slack CLI login on this machine
 
 tmux new-session -d -s work -c ~/your-project   # the agent's tmux session and working directory
@@ -60,14 +59,12 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 
 <details>
 <summary><b>Fix a bug from an attached crash log</b></summary>
-<br>
 <p>Attach <code>crash.log</code> and ask for the fix.</p>
 <p align="center"><img src="docs/images/crash-log.gif" alt="an agent reads an attached crash log, names the bug, and fixes it"></p>
 </details>
 
 <details>
 <summary><b>Files in, files out</b></summary>
-<br>
 <p>A file attached in Slack lands in the session as a local path.</p>
 <p align="center"><img src="docs/images/file-in.gif" alt="an attached file reaches the session and the agent answers about it"></p>
 <p>The agent posts files back with <code>slack-send --file</code>.</p>
@@ -76,7 +73,6 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 
 <details>
 <summary><b>Control the live session: <code>!effort</code>, <code>!stop</code>, <code>!goal</code></b></summary>
-<br>
 <p><code>!effort low</code> changes the effort level.</p>
 <p align="center"><img src="docs/images/effort.gif" alt="!effort from Slack, confirmed in the thread, then a question answered"></p>
 <p><code>!stop</code> interrupts the running task.</p>
@@ -87,19 +83,16 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 
 <details>
 <summary><b>Two agents on one repo at once</b></summary>
-<br>
 <p align="center"><img src="docs/images/two-agents.gif" alt="one Slack message gives demo-agent and demo-helper one bug each; both fix their bug at the same time and post a diff in the thread"></p>
 </details>
 
 <details>
 <summary><b>Ask an agent on another computer</b></summary>
-<br>
 <p align="center"><img src="docs/images/cross-computer.gif" alt="demo-agent on one computer asks kr-demo-agent on another computer in the same thread, then posts a comparison table"></p>
 </details>
 
 <details>
 <summary><b>Create a new agent from Slack</b></summary>
-<br>
 <p align="center"><img src="docs/images/spawn.gif" alt="a new agent is spawned from Slack and answers in the thread"></p>
 </details>
 
