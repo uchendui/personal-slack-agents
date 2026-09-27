@@ -417,9 +417,12 @@ class ForkWorkerTest(unittest.IsolatedAsyncioTestCase):
             token_path.write_text("secret")
             worker, _ = await self._spawn("antigravity", root, token_path)
             worker._broker_ref = mock.AsyncMock(return_value="ref")
+            # Fixed stamps: this machine's wall clock steps backwards, which
+            # would put a record written now before a `since` taken earlier.
+            worker.since = "2026-01-01T00:00:00Z"
+            fresh = "2026-01-01T00:00:01Z"
             transcript = worker.transcript
             transcript.parent.mkdir(parents=True)
-            fresh = module._utc_now_iso()
             transcript.write_text(
                 # A finished turn copied from the parent (old timestamp) and a
                 # fresh step that still carries tool calls: neither ends the turn.
@@ -429,7 +432,7 @@ class ForkWorkerTest(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(TimeoutError):
                 await worker.wait_done(0.3)
             with open(transcript, "a") as handle:
-                handle.write(json.dumps({"type": "PLANNER_RESPONSE", "status": "DONE", "tool_calls": [], "content": "done", "created_at": module._utc_now_iso()}) + "\n")
+                handle.write(json.dumps({"type": "PLANNER_RESPONSE", "status": "DONE", "tool_calls": [], "content": "done", "created_at": fresh}) + "\n")
             await worker.wait_done(5.0)
 
     async def test_wait_done_ignores_a_thinking_only_response(self):
@@ -439,18 +442,19 @@ class ForkWorkerTest(unittest.IsolatedAsyncioTestCase):
             token_path.write_text("secret")
             worker, _ = await self._spawn("antigravity", root, token_path)
             worker._broker_ref = mock.AsyncMock(return_value="ref")
+            worker.since = fresh = "2026-01-01T00:00:00Z"
             transcript = worker.transcript
             transcript.parent.mkdir(parents=True)
             # The CLI writes a thinking-only step as DONE without tool calls
             # and then continues the turn itself; it must not end the turn.
             transcript.write_text(json.dumps({
                 "type": "PLANNER_RESPONSE", "status": "DONE", "tool_calls": [],
-                "thinking": "**Considering the command**", "created_at": module._utc_now_iso(),
+                "thinking": "**Considering the command**", "created_at": fresh,
             }) + "\n")
             with self.assertRaises(TimeoutError):
                 await worker.wait_done(0.3)
             with open(transcript, "a") as handle:
-                handle.write(json.dumps({"type": "PLANNER_RESPONSE", "status": "DONE", "tool_calls": [], "content": "NO_OP", "created_at": module._utc_now_iso()}) + "\n")
+                handle.write(json.dumps({"type": "PLANNER_RESPONSE", "status": "DONE", "tool_calls": [], "content": "NO_OP", "created_at": fresh}) + "\n")
             await worker.wait_done(5.0)
 
     async def test_wait_done_fails_fast_when_the_prompt_never_reached_the_cli(self):
@@ -472,9 +476,12 @@ class ForkWorkerTest(unittest.IsolatedAsyncioTestCase):
                 worker.delivery.inject.assert_awaited_once_with("ref", "first ask")
                 # The record agy appends when it accepts a prompt: the turn is
                 # running, so wait_done keeps waiting for its end instead.
+                # The resend stamped `since` from the wall clock, which steps
+                # backwards here, so both stamps are fixed.
+                worker.since = "2026-01-01T00:00:00Z"
                 worker.transcript.write_text(json.dumps({
                     "step_index": 8, "source": "USER_EXPLICIT", "type": "USER_INPUT",
-                    "status": "DONE", "created_at": module._utc_now_iso(),
+                    "status": "DONE", "created_at": "2026-01-01T00:00:01Z",
                     "content": "<USER_REQUEST>\nReply with the single word pong.\n</USER_REQUEST>",
                 }) + "\n")
                 clock = time.monotonic()
