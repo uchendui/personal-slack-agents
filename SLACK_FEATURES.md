@@ -87,6 +87,8 @@ The whole spec. If it's not here, don't build it.
   lives — the bridge stores nothing.
 - `!stop` interrupts the live session immediately: send the interrupt
   (Ctrl+C equivalent) through the PTY broker. Not a stop-at-next-turn marker.
+- `!fast on|off` types `/fast on|off` into a Claude Code session; Antigravity
+  sessions refuse it.
 - Only the operator (ID in ~/.config/slack-bridge/operator.txt) can issue
   controls or authorize protected actions; a non-operator control attempt
   gets an explicit refusal in that thread.

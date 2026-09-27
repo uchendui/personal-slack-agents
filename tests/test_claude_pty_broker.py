@@ -319,6 +319,7 @@ class ClaudeAdapterParityTest(unittest.TestCase):
             ("rename", "new-name"): b"/rename new-name",
             ("clear-goal", None): b"/goal clear",
             ("clear", None): b"/clear",
+            ("fast", "off"): b"/fast off",
         }
         for (command, argument), keystrokes in expected.items():
             control = {"command": command}

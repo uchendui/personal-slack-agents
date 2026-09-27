@@ -39,7 +39,7 @@ RECONNECT_REPLAY_SECONDS = 300.0
 LIVE_BATCH_HOLD_SECONDS = 10.0
 CONTROL_NAMES = {
     "model", "effort", "compact", "stop", "rename",
-    "unregister", "goal", "clear-goal", "clear",
+    "unregister", "goal", "clear-goal", "clear", "fast",
 }
 FORK_SEND_TOOLS = {"antigravity": "antigravity-send"}
 FORK_TIMEOUT = 600
@@ -796,7 +796,7 @@ class Bridge:
                 if not argument:
                     raise ValueError("goal requires text")
                 await self.delivery.control(parent, "goal", argument)
-            elif command in ("model", "effort"):
+            elif command in ("model", "effort", "fast"):
                 if not argument:
                     raise ValueError(f"{command} requires an argument")
                 acknowledged = await self.delivery.control(parent, command, argument)
