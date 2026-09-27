@@ -38,6 +38,9 @@ class SlackSweepTest(unittest.TestCase):
             mock.patch.object(module.slack_admin, "_admin_token", return_value="fake-user-test"),
             mock.patch.object(module.slack_admin, "_any_bot_token", return_value="fake-bot-test"),
             mock.patch.object(module.slack_admin, "_delete_apps"),
+            mock.patch.object(module.slack_register, "load_registry", return_value={
+                "agents": {"quiet": {"app_id": "A-quiet"}}, "tombstones": {"old": {"app_id": "A-old"}},
+            }),
         )
         for patch in patches:
             patch.start()
@@ -76,6 +79,11 @@ class SlackSweepTest(unittest.TestCase):
         self.stub([bot("B2", "quiet", "A-quiet")], [])
         self.assertEqual(self.sweep(), "")
         self.delete.assert_called_once_with(["A-quiet"])
+
+    def test_silent_bot_of_another_machine_is_kept(self):
+        self.stub([bot("B4", "foreign", "A-foreign"), bot("B5", "retired", "A-old")], [])
+        self.assertEqual(self.sweep(), "")
+        self.delete.assert_called_once_with(["A-old"])
 
     def test_unresolvable_app_is_skipped(self):
         self.stub([bot("B3", "orphan", app_id=None)], [])

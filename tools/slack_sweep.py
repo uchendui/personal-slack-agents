@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete Slack apps of bots that have not posted in the workspace for 72 hours."""
+"""Delete Slack apps this machine registered whose bots have not posted for 72 hours."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import pty_broker
 import slack_admin
+import slack_register
 from slack_admin import AdminError, api
 
 STATE_PATH = Path.home() / ".local" / "state" / "slack-bridge" / "last-post.json"
@@ -79,6 +80,8 @@ def sweep(hours: float, dry_run: bool) -> None:
     now = time.time()
     cutoff = now - hours * 3600
     state = _load_state() | recent_posts(token, cutoff)
+    registry = slack_register.load_registry(slack_register.REGISTRY_PATH)
+    owned = {record["app_id"] for section in ("agents", "tombstones") for record in registry[section].values()}
     # The admin user token has no users:read; agent bot tokens do, as
     # slack_admin._resolve_app already relies on.
     for user_id, user in sorted(bots(slack_admin._any_bot_token()).items()):
@@ -88,6 +91,8 @@ def sweep(hours: float, dry_run: bool) -> None:
         app_id = user.get("profile", {}).get("api_app_id")
         if not isinstance(app_id, str) or not app_id:
             print(f"skipped {name} ({user_id}): no api_app_id")
+            continue
+        if app_id not in owned:
             continue
         if dry_run:
             print(f"would delete {name} ({user_id}, app {app_id}): no post in {hours:g}h")
