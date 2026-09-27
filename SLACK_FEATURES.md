@@ -129,11 +129,17 @@ The whole spec. If it's not here, don't build it.
 ## Antigravity CLI setup
 Install `agy` into `$HOME/.local/bin`, create its settings file at
 `$HOME/.gemini/antigravity-cli/settings.json`, and run
-`setup/setup-slack-bridge.sh` to install the PTY and send helpers. The
-`antigravity` launcher requires a nonempty
-`$HOME/.claude-code-router/gemini-key-router-token`, routes Gemini through
-`http://127.0.0.1:3460`, and needs `$HOME/.local/bin` on `PATH`. Remove
-any installer-generated absolute home-directory PATH append.
+`setup/setup-slack-bridge.sh` to install the PTY and send helpers.
+Register the running `agy` session with `slack-register --kind antigravity`.
+
+A message addressed to an Antigravity agent is answered by a reply fork,
+one per thread: a new `agy` process the bridge starts with `GEMINI_API_KEY` set to the contents
+of `$HOME/.claude-code-router/gemini-key-router-token` and
+`GOOGLE_GEMINI_BASE_URL=http://127.0.0.1:3460`. A Gemini router must listen
+on that port and accept that token. When the file is missing or empty, the
+fork does not start: the bridge logs `fork worker failed to start` with the
+cause and types the message into the live Antigravity session instead. If
+that also fails, it posts `Reply worker failed to start` in the thread.
 
 ## Security (all fail loud, never fall back)
 - Verify a live session before injecting: socket ownership and mode, process
