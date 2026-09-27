@@ -44,6 +44,30 @@ class SpawnTest(unittest.TestCase):
             "--dangerously-skip-permissions",
         ))
 
+    def test_plain_shell_spawn_leaves_config_dir_unset_and_uses_claude_defaults(self):
+        calls = []
+
+        def fake_run(argv, **kwargs):
+            calls.append(argv)
+            stdout = "/work/admin\n" if argv[1] == "display-message" else ""
+            return subprocess.CompletedProcess(argv, 0, stdout, "")
+
+        environment = {key: value for key, value in module.os.environ.items() if key != "CLAUDE_CONFIG_DIR"}
+        with mock.patch.dict(module.os.environ, environment, clear=True), \
+             mock.patch.object(module.subprocess, "run", side_effect=fake_run), \
+             mock.patch.object(module.slack_register, "_live_claude_args",
+                               side_effect=module.slack_register.RegisterError("no live claude")), \
+             mock.patch.object(module.slack_register, "_register") as register:
+            module.run(["plain-agent", "--tmux-session", "admin"])
+
+        args, kwargs = register.call_args
+        self.assertEqual(args[3:5], (None, "--dangerously-skip-permissions"))
+        home_bin = Path.home() / ".local" / "bin"
+        self.assertEqual(module.shlex.split(calls[1][-1]), [
+            "env", str(home_bin / "claude-pty-broker"), "--", str(home_bin / "claude"),
+            "--session-id", kwargs["session"], "--name", "plain-agent", "--dangerously-skip-permissions",
+        ])
+
     def test_custom_launcher_runs_behind_the_broker_and_is_stored(self):
         calls = []
 

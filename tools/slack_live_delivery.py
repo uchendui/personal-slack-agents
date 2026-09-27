@@ -139,7 +139,7 @@ def open_conversation_ids(pid: int, root: Path, proc_root: Path = Path("/proc"))
 
 
 def launch_command(
-    profile_dir: Path, launcher: str, launcher_path: str | None, session_flags: str, runtime_args: str
+    profile_dir: Path | None, launcher: str, launcher_path: str | None, session_flags: str, runtime_args: str
 ) -> str:
     """The command a tmux window runs to start or resume a Claude session
     under profile_dir.
@@ -153,14 +153,15 @@ def launch_command(
     because its own children (node for ccr, then claude) are found by PATH."""
     flags = f"{session_flags} {runtime_args}".rstrip()
     local_bin = Path.home() / ".local" / "bin"
-    environment = f"CLAUDE_CONFIG_DIR={shlex.quote(str(profile_dir))}"
+    # No profile_dir leaves CLAUDE_CONFIG_DIR unset, as a plain `claude` runs.
+    environment = "" if profile_dir is None else f" CLAUDE_CONFIG_DIR={shlex.quote(str(profile_dir))}"
     if launcher == "claude":
         program = shlex.quote(str(local_bin / "claude"))
     else:
         program = launcher
         environment += f" PATH={shlex.quote(launcher_path)}"
     return (
-        f"env {environment} "
+        f"env{environment} "
         f"{shlex.quote(str(local_bin / 'claude-pty-broker'))} -- "
         f"{program} {flags}"
     )

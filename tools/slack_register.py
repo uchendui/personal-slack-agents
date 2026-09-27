@@ -52,7 +52,7 @@ class AgentConfig:
     workdir: Path
     deliver_channel_messages: bool
     operator_user_id: str
-    profile_dir: Path
+    profile_dir: Path | None
     runtime_args: str
     launcher: str
     launcher_path: str | None
@@ -147,7 +147,7 @@ def load_agent_configs(directory: Path) -> dict[str, AgentConfig]:
         kind = values["AGENT_KIND"]
         workdir = Path(values["WORKDIR"])
         if kind == "claude":
-            profile = Path(values["CLAUDE_CONFIG_DIR"])
+            profile = Path(values["CLAUDE_CONFIG_DIR"]) if "CLAUDE_CONFIG_DIR" in values else None
             runtime_args = values["CLAUDE_ARGS"]
         elif kind == "codex":
             profile = Path(values["CODEX_HOME"])
@@ -157,7 +157,7 @@ def load_agent_configs(directory: Path) -> dict[str, AgentConfig]:
             runtime_args = ""
         else:
             raise RegisterError(f"unsupported agent kind: {kind}")
-        if not workdir.is_absolute() or not profile.is_absolute():
+        if not workdir.is_absolute() or (profile is not None and not profile.is_absolute()):
             raise RegisterError(f"agent paths are not absolute: {path.stem}")
         configs[path.stem] = AgentConfig(
             path.stem,
@@ -451,10 +451,14 @@ def _provision(name, app_id, team, joins):
     operator = _user_api("auth.test", team)
     values["BOT_USER_ID"] = bot.get("user_id")
     values["OPERATOR_USER_ID"] = operator.get("user_id")
-    if values["OPERATOR_USER_ID"] not in operator_user_ids():
-        raise RegisterError("Slack CLI user does not match operator.txt")
     if any(type(value) is not str or not value for value in values.values()):
         raise RegisterError("Slack identity lookup returned invalid credentials")
+    operator_file = CONFIG_DIR / "operator.txt"
+    if not operator_file.exists():
+        # The first registration on a machine makes its Slack CLI user the operator.
+        _write(operator_file, values["OPERATOR_USER_ID"] + "\n")
+    elif values["OPERATOR_USER_ID"] not in operator_user_ids():
+        raise RegisterError("Slack CLI user does not match operator.txt")
     _join_channels(values, joins)
     return values
 
@@ -595,7 +599,9 @@ def _register(name, kind, workdir, profile, runtime_args, team, joins, session=N
         else:
             raise RegisterError(f"unsupported agent kind: {kind}")
         values.update({"WORKDIR": str(workdir)})
-        if profile_key is not None:
+        if profile is None:
+            values.pop(profile_key, None)
+        elif profile_key is not None:
             values[profile_key] = str(profile)
         if args_key is not None:
             values[args_key] = runtime_args
@@ -815,10 +821,11 @@ def run(argv=None):
         if not args.name or not args.kind or args.workdir is None:
             parser.error("registration requires name, --kind, and --workdir")
         if args.kind == "claude":
-            if args.claude_config_dir is None or args.codex_home is not None or args.codex_args:
+            if args.codex_home is not None or args.codex_args:
                 parser.error("claude registration requires only Claude profile flags")
             runtime_args = args.claude_args if args.claude_args is not None else _live_claude_args()
-            profile = args.claude_config_dir
+            config_dir = args.claude_config_dir or os.environ.get("CLAUDE_CONFIG_DIR")
+            profile = Path(config_dir) if config_dir else None
             try:
                 launcher = None if args.launcher is None else resolve_launcher(args.launcher)
             except ValueError as exc:
@@ -837,7 +844,7 @@ def run(argv=None):
             args.name,
             args.kind,
             args.workdir.expanduser().resolve(),
-            profile.expanduser().resolve(),
+            profile and profile.expanduser().resolve(),
             runtime_args,
             args.team,
             joins(args.join),

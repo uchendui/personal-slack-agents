@@ -19,6 +19,8 @@ login profile, and replies land back in the Slack thread.
    the directory containing this project's memory path (for example
    `~/.claude-<profile>` for a subscription profile), and pass it
    explicitly.
+   When `CLAUDE_CONFIG_DIR` is unset in this session, omit
+   `--claude-config-dir`; the agent then runs with it unset too.
 3. Use your agents workspace (`--team <TEAM_ID>`) unless the user explicitly names
    another workspace. Do not ask which workspace to use. Pass this team flag
    for every registration kind below. Run using background Bash:

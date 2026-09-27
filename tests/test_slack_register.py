@@ -239,6 +239,19 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
         loaded = module.load_agent_configs(self.agents)["test-agent"]
         self.assertEqual((loaded.launcher, loaded.launcher_path), ("claude", None))
 
+    def test_unset_config_dir_loads_and_revives_without_claude_config_dir(self):
+        with (
+            mock.patch.object(module, "_credentials", return_value=credentials()),
+            mock.patch.object(module, "_announce"),
+        ):
+            module._register("test-agent", "claude", Path("/work"), None, "", None, ())
+        module.load_agent("test-agent", self.agents)
+        loaded = module.load_agent_configs(self.agents)["test-agent"]
+        command = module.slack_live_delivery.launch_command(
+            loaded.profile_dir, loaded.launcher, loaded.launcher_path, "--resume s", loaded.runtime_args
+        )
+        self.assertNotIn("CLAUDE_CONFIG_DIR", command)
+
     def test_rename_carries_the_launcher_from_the_retired_identity(self):
         self.write_registered(name="old-name", session="live-session",
                               CLAUDE_LAUNCHER="/opt/bin/ccr cc-work cli --",
@@ -420,6 +433,31 @@ class SlackRegisterTest(unittest.IsolatedAsyncioTestCase):
             module._provision("test-agent", "A-test", "T-test", ())
         self.assertEqual(user_calls[-3][0], "apps.manifest.update")
         self.assertTrue(user_calls[-3][2]["json_body"])
+
+    def test_first_registration_writes_operator_txt_and_later_ones_check_it(self):
+        self.write_registered("agent-a")
+
+        def user_api(method, team, **fields):
+            if method == "apps.manifest.create":
+                return {"app_id": "A-test"}
+            if method == "apps.developerInstall":
+                return {"api_access_tokens": {"bot": "fake-bot-test", "app_level": "xapp-test"}}
+            return {"user_id": "U-operator"}
+
+        def bot_api(method, token=None, **fields):
+            return {"members": []} if method == "users.list" else {"user_id": "B-test"}
+
+        operator_file = self.root / "operator.txt"
+        with (
+            mock.patch.object(module, "_user_api", side_effect=user_api),
+            mock.patch.object(module, "_api", side_effect=bot_api),
+        ):
+            self.assertEqual(module._provision("test-agent", None, "T-test", ()), credentials())
+            self.assertEqual(operator_file.read_text(), "U-operator\n")
+            self.assertEqual(stat.S_IMODE(operator_file.stat().st_mode), 0o600)
+            module._write(operator_file, "U-other\n")
+            with self.assertRaises(module.RegisterError):
+                module._provision("test-agent", None, "T-test", ())
 
     def test_join_rejects_unconfirmed_membership(self):
         def bot_api(method, token, **fields):

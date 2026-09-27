@@ -25,9 +25,10 @@ def run(argv=None):
                         help="command prefix that runs Claude Code, e.g. 'ccr cc-work cli --'")
     parser.add_argument("--model", help="replaces the live session's --model/--effort")
     args = parser.parse_args(argv)
-    # ~/.claude is where Claude Code itself keeps its login when CLAUDE_CONFIG_DIR is unset.
-    config_dir = args.claude_config_dir or os.environ.get("CLAUDE_CONFIG_DIR") or "~/.claude"
-    profile = Path(config_dir).expanduser().resolve()
+    # With neither, the session runs with CLAUDE_CONFIG_DIR unset: Claude Code
+    # then reads ~/.claude.json, which setting it to ~/.claude would bypass.
+    config_dir = args.claude_config_dir or os.environ.get("CLAUDE_CONFIG_DIR")
+    profile = Path(config_dir).expanduser().resolve() if config_dir else None
     try:
         launcher = slack_register.resolve_launcher(args.launcher)
     except ValueError as exc:

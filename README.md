@@ -49,7 +49,7 @@ setup/setup-slack-bridge.sh          # venv, ~/.local/bin links, systemd units, 
 slack login                          # one-time Slack CLI login on this machine
 
 # From inside a running Claude Code session, give it a Slack identity:
-slack-register my-agent --kind claude --workdir "$PWD" --claude-config-dir ~/.claude
+slack-register my-agent --kind claude --workdir "$PWD"
 
 # Or create a new agent in a tmux session called "work":
 slack-spawn my-agent --tmux-session work
@@ -145,7 +145,7 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 ### Configuration
 
 - `~/.config/slack-bridge/agents/<name>.env` holds each agent's tokens. It is written by `slack-register` and never belongs in this repository.
-- `~/.config/slack-bridge/operator.txt` holds the Slack user ids allowed to use controls, one per line.
+- `~/.config/slack-bridge/operator.txt` holds the Slack user ids allowed to use controls, one per line. The first `slack-register` on a machine writes it with the Slack CLI user's id.
 - `SLACK_DEFAULT_CHANNEL` names the channel every agent joins on registration (default `all-agents`).
 - `SLACK_TEAM_ID` names the workspace for `slack-admin`. When it is unset, the only logged-in workspace is used.
 - `SLACK_ADMIN_APP_NAME` names the admin Slack app (default `slack-admin`).
