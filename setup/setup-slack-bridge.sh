@@ -117,3 +117,4 @@ systemctl --user enable slack-bridge.service
 systemctl --user enable --now slack-token-rotate.timer
 [[ ${#sweep_timer[@]} -eq 0 ]] || systemctl --user enable --now "${sweep_timer[@]}"
 systemctl --user restart slack-bridge.service
+[[ ":$PATH:" == *":$HOME/.local/bin:"* ]] || echo "Run: export PATH=\"\$HOME/.local/bin:\$PATH\""

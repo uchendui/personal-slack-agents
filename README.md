@@ -48,10 +48,12 @@ The full behavior is in [`SLACK_FEATURES.md`](SLACK_FEATURES.md).
 git clone https://github.com/uchendui/personal-slack-agents ~/personal-slack-agents
 cd ~/personal-slack-agents
 setup/setup-slack-bridge.sh          # venv, ~/.local/bin links, systemd units, bridge start
+export PATH="$HOME/.local/bin:$PATH" # only if setup printed this line
 slack login                          # one-time Slack CLI login on this machine
 
 tmux new-session -d -s work -c ~/your-project   # the agent's tmux session and working directory
 slack-spawn my-agent --tmux-session work     # new agent in that session, with its own Slack bot
+tmux attach -t work                          # approve the folder trust and bypass-permissions prompts, then Ctrl-b d
 ```
 
 Then DM `@my-agent` in Slack.
@@ -130,7 +132,7 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 - Linux with systemd user services, bash, tmux, git, curl, python3 (3.11 or newer), and python3-venv.
 - A Slack workspace where you can create apps.
 - The Slack CLI. The setup script installs it when it is missing.
-- The agent CLIs you want to expose (`claude`, `codex`, or `agy`) in `~/.local/bin` or on `PATH`.
+- The agent CLIs you want to expose (`claude` or `agy`) in `~/.local/bin` or on `PATH`.
 
 ### What `setup/setup-slack-bridge.sh` does
 
@@ -159,7 +161,7 @@ Paste [`docs/CLAUDE-slack.md`](docs/CLAUDE-slack.md) into your agents' `CLAUDE.m
 ## Create an agent from Slack
 
 ```
-slack-spawn <name> --tmux-session <session> [--join <channel>] [--launcher "<command>"] [--claude-config-dir <dir>] [--model <model>]
+slack-spawn <name> --tmux-session <session> [--join <channel>] [--launcher "<command>"] [--claude-config-dir <dir>] [--model <model>] [--team <team id>]
 ```
 
 - It registers a new agent and starts a Claude Code session for it.
