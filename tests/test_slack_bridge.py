@@ -35,13 +35,16 @@ with mock.patch.dict(sys.modules, {
     "slack_register": register_module,
 }):
     spec.loader.exec_module(bridge_module)
+real_register_spec = importlib.util.spec_from_file_location("slack_register_real", TOOLS / "slack_register.py")
+real_register = importlib.util.module_from_spec(real_register_spec)
+sys.modules[real_register_spec.name] = real_register
+real_register_spec.loader.exec_module(real_register)
 
 
 def config(**changes):
     values = dict(
         bot_user_id="B-test",
         operator_user_id="U-operator",
-        team_id="T-test",
         deliver_channel_messages=True,
         kind="claude",
         session_id=None,
@@ -235,6 +238,22 @@ class BridgeRoutingTest(unittest.IsolatedAsyncioTestCase):
                     export.assert_called_once_with("apps.manifest.export", "T-test", app_id="A-remote")
                 self.assertEqual(transport.inject.await_count, 2 * delivered)
                 self.assertEqual(slack.add_reaction.await_count, 2 * delivered)
+
+    async def test_remote_operator_agent_reaches_an_agent_with_a_real_config(self):
+        settings = real_register.AgentConfig(
+            name="agent", app_token="xapp", bot_token="xoxb", app_id="A-test",
+            bot_user_id="B-test", kind="claude", workdir=Path("/tmp"),
+            deliver_channel_messages=True, operator_user_id="U-operator",
+            profile_dir=None, runtime_args="", launcher="", launcher_path=None, session_id=None,
+        )
+        value, _, transport, _ = bridge(settings)
+        with mock.patch.object(register_module, "_user_api") as export:
+            await value.handle("agent", event(
+                "remote", channel_type="im", user="B-remote", bot_id="B-remote",
+                bot_profile={"app_id": "A-remote"},
+            ))
+        export.assert_called_once_with("apps.manifest.export", "T-test", app_id="A-remote")
+        transport.inject.assert_awaited_once()
 
     async def test_addressed_files_are_downloaded_or_the_message_is_refused(self):
         value, slack, transport, parent = bridge()

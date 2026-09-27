@@ -376,7 +376,7 @@ class Bridge:
         local_bots = {other.bot_user_id for other in self.configs.values()}
         if not (
             user in operators or user in local_bots
-            or await self._operator_app(config, bot_profile)
+            or await self._operator_app(envelope.get("team_id"), bot_profile)
         ):
             LOG.info("%s: dropped %s %s from non-operator %s", agent, channel, timestamp, user)
             return
@@ -465,7 +465,7 @@ class Bridge:
         await react(api, channel, timestamp)
         self._record_seen(agent, timestamp)
 
-    async def _operator_app(self, config, bot_profile) -> bool:
+    async def _operator_app(self, team, bot_profile) -> bool:
         # A bot whose app the operator's Slack login can manage is one of the
         # operator's agents, possibly registered on another machine.
         app_id = bot_profile.get("app_id") if isinstance(bot_profile, dict) else None
@@ -474,7 +474,7 @@ class Bridge:
         if app_id not in self.operator_apps:
             try:
                 await asyncio.to_thread(
-                    slack_register._user_api, "apps.manifest.export", config.team_id, app_id=app_id
+                    slack_register._user_api, "apps.manifest.export", team, app_id=app_id
                 )
                 self.operator_apps[app_id] = True
             except slack_register.SlackAPIError:
