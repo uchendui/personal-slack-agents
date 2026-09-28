@@ -118,7 +118,8 @@ class SpawnTest(unittest.TestCase):
 
     def test_missing_tmux_session_dies_before_registering(self):
         failed = subprocess.CompletedProcess((), 1, "", "can't find session: nope")
-        with mock.patch.object(module.subprocess, "run", return_value=failed), \
+        with mock.patch.object(module.slack_register.shutil, "which", return_value="/usr/bin/claude"), \
+             mock.patch.object(module.subprocess, "run", return_value=failed), \
              mock.patch.object(module.slack_register, "_register") as register:
             with self.assertRaisesRegex(module.slack_register.RegisterError, "can't find session"):
                 module.run(["x", "--tmux-session", "nope", "--claude-config-dir", "/p"])

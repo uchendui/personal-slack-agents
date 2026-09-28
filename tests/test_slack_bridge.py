@@ -8,6 +8,9 @@ import tempfile
 import time
 import types
 import unittest
+# Loaded before the sys.modules patch below, which would otherwise drop it on exit;
+# on Python 3.11 that frees _zoneinfo's internals and ZoneInfo() raises SystemError.
+import zoneinfo  # noqa: F401
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
