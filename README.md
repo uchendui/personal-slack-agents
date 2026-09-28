@@ -3,7 +3,7 @@
 <p align="center"><b>DM your own Claude Code and Antigravity sessions from Slack, and they answer in the thread.</b></p>
 
 <p align="center">
-  <img alt="tests" src="https://img.shields.io/badge/tests-251%20passing-2ea44f">
+  <a href="https://github.com/uchendui/personal-slack-agents/actions/workflows/tests.yml"><img alt="tests" src="https://github.com/uchendui/personal-slack-agents/actions/workflows/tests.yml/badge.svg"></a>
   <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
   <img alt="runtimes" src="https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Antigravity-6f42c1">
 </p>
